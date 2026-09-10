@@ -1,0 +1,178 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: #1e1e1e;
+  color: #d4d4d4;
+}
+
+.workbench {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+.sidebar {
+  width: 260px;
+  background: #252526;
+  border-right: 1px solid #333;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar h3 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+  color: #858585;
+}
+.cred-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cred-list li {
+  background: #2d2d2d;
+  padding: 10px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+.cred-list li span {
+  color: #858585;
+}
+
+.main-panel {
+  flex: 1;
+  padding: 40px;
+  background: #1e1e1e;
+}
+.main-panel h2 {
+  margin-bottom: 8px;
+  font-size: 24px;
+  color: #fff;
+}
+.main-panel p {
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: #a9a9a9;
+}
+
+.vault-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 400px;
+}
+.vault-form input {
+  padding: 12px;
+  background: #3c3c3c;
+  border: 1px solid transparent;
+  color: #fff;
+  border-radius: 4px;
+  outline: none;
+  font-size: 14px;
+}
+.vault-form input:focus {
+  border-color: #007acc;
+}
+.vault-form button {
+  padding: 12px;
+  background: #007acc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: 0.2s;
+}
+.vault-form button:hover {
+  background: #0098ff;
+}
+
+.sidebar-title {
+  font-size: 16px;
+  margin-bottom: 20px;
+  color: #fff;
+}
+.nav-btn {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 10px;
+  color: #a9a9a9;
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 4px;
+  margin-bottom: 5px;
+}
+.nav-btn:hover {
+  background: #333;
+  color: #fff;
+}
+.nav-btn.active {
+  background: #007acc;
+  color: #fff;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.btn-primary {
+  padding: 8px 16px;
+  background: #007acc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+.btn-primary:hover {
+  background: #0098ff;
+}
+
+.formatter-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.editor-status {
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #a9a9a9;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.badge {
+  background: #007acc;
+  padding: 2px 8px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: bold;
+}
+.error-text {
+  color: #f48771;
+}
+
+.editor-container {
+  flex: 1;
+  border: 1px solid #333;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.input-dark { padding: 8px; background: #3c3c3c; color: white; border: none; border-radius: 4px; }

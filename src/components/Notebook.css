@@ -1,0 +1,170 @@
+.notebook {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	background: #1e1e1e;
+	color: #e0e0e0;
+	font-family: "Segoe UI", sans-serif;
+}
+
+.notebook-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 16px;
+	background: #252526;
+	border-bottom: 1px solid #3c3c3c;
+}
+
+.notebook-toolbar button {
+	padding: 6px 14px;
+	background: #3c3c3c;
+	color: #fff;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 13px;
+	transition: background 0.15s ease;
+}
+
+.notebook-toolbar button:hover:not(:disabled) {
+	background: #4a4a4a;
+}
+
+.notebook-toolbar button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.kernel-status {
+	margin-right: auto;
+	font-size: 13px;
+	font-weight: 500;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.kernel-status.ready {
+	color: #4caf50;
+}
+
+.kernel-status.starting {
+	color: #d9a441;
+}
+
+.notebook-cells {
+	flex: 1;
+	overflow-y: auto;
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.notebook-cell {
+	display: flex;
+	background: #252526;
+	border: 1px solid #3c3c3c;
+	border-radius: 6px;
+	overflow: hidden;
+	transition: border-color 0.15s ease;
+}
+
+.notebook-cell.status-running {
+	border-color: #d9a441;
+}
+
+.notebook-cell.status-ok {
+	border-color: #3c3c3c;
+}
+
+.notebook-cell.status-error {
+	border-color: #d9534f;
+}
+
+.cell-gutter {
+	flex-shrink: 0;
+	width: 56px;
+	padding: 10px 8px;
+	background: #2d2d2d;
+	color: #858585;
+	font-family: "Cascadia Code", "Consolas", monospace;
+	font-size: 12px;
+	text-align: right;
+	user-select: none;
+}
+
+.cell-body {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.cell-editor {
+	width: 100%;
+	min-height: 70px;
+	padding: 10px 12px;
+	background: #1e1e1e;
+	color: #e0e0e0;
+	border: none;
+	outline: none;
+	resize: vertical;
+	font-family: "Cascadia Code", "Consolas", monospace;
+	font-size: 13px;
+	line-height: 1.5;
+	box-sizing: border-box;
+}
+
+.cell-editor::placeholder {
+	color: #6a6a6a;
+}
+
+.cell-actions {
+	display: flex;
+	gap: 6px;
+	padding: 6px 8px;
+	background: #2a2a2a;
+	border-top: 1px solid #333;
+}
+
+.cell-actions button {
+	padding: 4px 10px;
+	background: #3c3c3c;
+	color: #ddd;
+	border: none;
+	border-radius: 3px;
+	cursor: pointer;
+	font-size: 12px;
+	transition: background 0.15s ease;
+}
+
+.cell-actions button:hover:not(:disabled) {
+	background: #4a4a4a;
+}
+
+.cell-actions button:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.cell-output {
+	margin: 0;
+	padding: 10px 12px;
+	background: #181818;
+	color: #cfcfcf;
+	border-top: 1px solid #333;
+	font-family: "Cascadia Code", "Consolas", monospace;
+	font-size: 12.5px;
+	line-height: 1.5;
+	white-space: pre-wrap;
+	word-break: break-word;
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+.cell-output.error {
+	color: #f28b82;
+	background: #2a1e1e;
+}
