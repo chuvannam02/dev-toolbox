@@ -608,6 +608,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+		.plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_opener::init()) // <--- Thêm dòng này
         // XỬ LÝ LƯU DATABASE VÀO APPDATA CỦA HỆ ĐIỀU HÀNH
         .setup(|app| {
@@ -632,8 +633,8 @@ pub fn run() {
             trigger_jenkins_job,
 			notebook::ensure_kernel_started,
 			fake_data::generate_fake_data,
-    notebook::execute_cell,
-    notebook::restart_kernel,
+			notebook::execute_cell,
+			notebook::restart_kernel,
         ])
         .run(tauri::generate_context!())
         .expect("Lỗi khi chạy ứng dụng Tauri");

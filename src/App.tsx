@@ -1,32 +1,46 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import {
+	lazy,
+	Suspense,
+	useEffect,
+	useMemo,
+	useState,
+	type ComponentType,
+} from "react";
 import { invoke } from "@tauri-apps/api/core";
+import {
+	BookOpen,
+	Bot,
+	Boxes,
+	Braces,
+	Code2,
+	FileDiff,
+	FileSpreadsheet,
+	FolderKanban,
+	KeyRound,
+	Moon,
+	Rocket,
+	Sun,
+	TerminalSquare,
+	Clock3,
+	WandSparkles,
+} from "lucide-react";
 import "./App.css";
 import { AppTab, Credential } from "./types/App.type";
 import { NAVIGATION_ITEMS } from "./constants/navigation";
 
 const BilingualWriter = lazy(() => import("./components/BilingualWriter"));
-
 const JenkinsController = lazy(() => import("./components/JenkinsController"));
-
 const SmartFormatter = lazy(() => import("./components/SmartFormatter"));
-
 const CompareFiles = lazy(() => import("./components/CompareFiles"));
-
 const JsonToExcel = lazy(() => import("./components/JsonToExcel"));
-
 const Cheatsheet = lazy(() => import("./components/Cheatsheet"));
-
 const Vault = lazy(() => import("./components/Vault"));
-
 const Workspace = lazy(() => import("./components/Workspace"));
-
 const DockerLogs = lazy(() => import("./components/DockerLogs"));
-
 const AnsibleAutomation = lazy(() => import("./components/AnsibleAutomation"));
-
 const Notebook = lazy(() => import("./components/Notebook"));
-
 const FakeDataGenerator = lazy(() => import("./components/FakeDataGenerator"));
+const TimeConverter = lazy(() => import("./components/TimeConverter"));
 
 const TAB_COMPONENTS = {
 	docker: DockerLogs,
@@ -39,42 +53,58 @@ const TAB_COMPONENTS = {
 	excel: JsonToExcel,
 	cheatsheet: Cheatsheet,
 	notebook: Notebook,
-	fakeDataGenerator: FakeDataGenerator
+	fakeDataGenerator: FakeDataGenerator,
+	timeConverter: TimeConverter,
 } as const;
+const NAVIGATION_ICONS: Record<AppTab, ComponentType<{ size?: number }>> = {
+	docker: Boxes,
+	workspace: FolderKanban,
+	ansible: Bot,
+	writer: WandSparkles,
+	jenkins: Rocket,
+	formatter: Braces,
+	diff: FileDiff,
+	excel: FileSpreadsheet,
+	cheatsheet: TerminalSquare,
+	vault: KeyRound,
+	notebook: BookOpen,
+	fakeDataGenerator: Code2,
+	timeConverter: Clock3,
+};
 
 function App() {
 	const [activeTab, setActiveTab] = useState<AppTab>("workspace");
 	const [credentials, setCredentials] = useState<Credential[]>([]);
-
+	const [searchVault, setSearchVault] = useState("");
+	const [darkMode, setDarkMode] = useState(
+		() => localStorage.getItem("darkMode") === "true",
+	);
 	async function loadCredentials() {
 		try {
-			const data: Credential[] = await invoke("get_credentials");
-			setCredentials(data);
+			setCredentials(await invoke<Credential[]>("get_credentials"));
 		} catch (error) {
 			console.error("Unable to load credentials:", error);
 		}
 	}
-
-	const [searchVault, setSearchVault] = useState("");
-
 	const filteredCredentials = useMemo(() => {
 		const query = searchVault.trim().toLowerCase();
-		if (!query) return credentials;
-
-		return credentials.filter(
-			(credential) =>
-				credential.name.toLowerCase().includes(query) ||
-				credential.username.toLowerCase().includes(query),
-		);
+		return query
+			? credentials.filter(
+					(credential) =>
+						credential.name.toLowerCase().includes(query) ||
+						credential.username.toLowerCase().includes(query),
+				)
+			: credentials;
 	}, [credentials, searchVault]);
-
 	useEffect(() => {
 		if (activeTab === "vault") void loadCredentials();
-		// if (activeTab === "workspace") loadApps();
 	}, [activeTab]);
-
+	useEffect(() => {
+		document.documentElement.classList.toggle("dark", darkMode);
+		localStorage.setItem("darkMode", String(darkMode));
+	}, [darkMode]);
 	const renderActiveTab = () => {
-		if (activeTab === "vault") {
+		if (activeTab === "vault")
 			return (
 				<Vault
 					credentials={filteredCredentials}
@@ -83,43 +113,54 @@ function App() {
 					onCredentialSaved={loadCredentials}
 				/>
 			);
-		}
-
 		const Component = TAB_COMPONENTS[activeTab];
-
 		return <Component />;
 	};
 
 	return (
 		<div className="workbench">
-			<div className="sidebar">
-				<h3 className="sidebar-title">Dev Toolbox</h3>
-				{NAVIGATION_ITEMS.map(({ id, label }) => (
+			<aside className="sidebar">
+				<div className="sidebar-header">
+					<h3 className="sidebar-title">Dev Toolbox</h3>
 					<button
-						key={id}
-						className={`nav-btn ${activeTab === id ? "active" : ""}`}
-						onClick={() => setActiveTab(id)}
+						className="theme-toggle"
+						onClick={() => setDarkMode((current) => !current)}
+						title={
+							darkMode
+								? "Chuyển sang giao diện sáng"
+								: "Chuyển sang giao diện tối"
+						}
+						aria-label={
+							darkMode
+								? "Chuyển sang giao diện sáng"
+								: "Chuyển sang giao diện tối"
+						}
 					>
-						{label}
+						{darkMode ? <Sun size={17} /> : <Moon size={17} />}
 					</button>
-				))}
-
+				</div>
+				<nav>
+					{NAVIGATION_ITEMS.map(({ id, label }) => {
+						const Icon = NAVIGATION_ICONS[id];
+						return (
+							<button
+								key={id}
+								className={`nav-btn ${activeTab === id ? "active" : ""}`}
+								onClick={() => setActiveTab(id)}
+							>
+								<Icon size={16} />
+								<span>{label}</span>
+							</button>
+						);
+					})}
+				</nav>
 				{activeTab === "vault" && (
-					<div style={{ marginTop: "20px" }}>
+					<div className="vault-search">
 						<input
 							type="text"
-							placeholder="🔍 Tìm Server, Tài khoản..."
+							placeholder="Tìm server, tài khoản..."
 							value={searchVault}
 							onChange={(e) => setSearchVault(e.target.value)}
-							style={{
-								width: "100%",
-								padding: "8px",
-								background: "#3c3c3c",
-								color: "#fff",
-								border: "none",
-								borderRadius: "4px",
-								marginBottom: "10px",
-							}}
 						/>
 						<ul className="cred-list">
 							{filteredCredentials.map((c) => (
@@ -131,15 +172,13 @@ function App() {
 						</ul>
 					</div>
 				)}
-			</div>
-
-			<div className="main-panel">
+			</aside>
+			<main className="main-panel">
 				<Suspense fallback={<div className="loading">Loading...</div>}>
 					{renderActiveTab()}
 				</Suspense>
-			</div>
+			</main>
 		</div>
 	);
 }
-
 export default App;

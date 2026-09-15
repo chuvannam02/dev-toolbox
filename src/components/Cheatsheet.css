@@ -1,0 +1,454 @@
+.cheatsheet-view {
+	height: 100%;
+	overflow-y: auto;
+	padding-bottom: 28px;
+	max-width: 1680px;
+	margin: 0 auto;
+}
+
+/* Every clickable control gets a pointer cursor + the app's radius. */
+.cheatsheet-view button,
+.cheatsheet-view [role="button"],
+.cheatsheet-view select,
+.cheatsheet-view summary {
+	cursor: pointer;
+}
+.cheatsheet-view button:disabled {
+	cursor: not-allowed;
+	opacity: 0.6;
+}
+.cheatsheet-view button,
+.cheatsheet-view .filter-select,
+.cheatsheet-view input,
+.cheatsheet-view textarea {
+	border-radius: var(--radius);
+}
+
+.cheatsheet-header {
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-between;
+	padding-bottom: 18px;
+	border-bottom: 1px solid var(--border);
+}
+.cheatsheet-header h2 {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	letter-spacing: -0.02em;
+}
+.cheatsheet-header p {
+	margin-top: 8px;
+	color: var(--muted-foreground);
+}
+
+.command-filters {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 18px 0 22px;
+	padding: 10px;
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: calc(var(--radius) + 2px);
+	box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+}
+.command-add input,
+.command-add textarea {
+	color: var(--foreground);
+	background: var(--input-surface);
+	border: 1px solid var(--border);
+	padding: 9px 10px;
+	font: inherit;
+}
+.filter-select {
+	height: 40px;
+	min-width: 165px;
+}
+.command-search {
+	display: flex;
+	align-items: center;
+	flex: 1;
+	min-height: 40px;
+	gap: 8px;
+	padding: 0 10px;
+	color: var(--muted-foreground);
+	background: var(--secondary);
+	border: 0;
+	border-radius: var(--radius);
+}
+.command-search:focus-within {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
+}
+.command-search input {
+	min-width: 0;
+	flex: 1;
+	height: 38px;
+	border: 0;
+	outline: 0;
+	color: var(--foreground);
+	background: transparent;
+	font: inherit;
+}
+.command-search span {
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.command-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 320px;
+	gap: 24px;
+	align-items: start;
+}
+.command-results {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	align-content: start;
+	gap: 16px;
+}
+
+.command-card {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	min-height: 176px;
+	padding: 17px;
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: calc(var(--radius) + 2px);
+	transition:
+		border-color 0.16s ease,
+		transform 0.16s ease,
+		box-shadow 0.16s ease;
+}
+.command-card:hover {
+	border-color: var(--ring);
+	transform: translateY(-2px);
+	box-shadow: 0 9px 22px rgb(0 0 0 / 0.12);
+}
+
+.command-meta {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 8px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid var(--border);
+	font-size: 12px;
+	color: var(--muted-foreground);
+}
+.command-meta span,
+.command-meta b {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.command-meta b {
+	color: var(--foreground);
+}
+
+.command-code {
+	position: relative;
+	display: block;
+	width: 100%;
+	margin: 12px 0 10px;
+	padding: 0;
+	color: inherit;
+	text-align: left;
+	background: none;
+	border: 0;
+	cursor: copy;
+}
+.command-code code {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	min-height: 44px;
+	margin: 0;
+	padding: 10px 42px 10px 10px;
+	overflow-x: auto;
+	color: #ce9178;
+	background: var(--background);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	font-size: 12px;
+	line-height: 1.45;
+	transition:
+		border-color 0.15s ease,
+		background 0.15s ease;
+}
+.command-code:hover code {
+	border-color: var(--ring);
+	background: var(--secondary);
+}
+.command-copy-hint {
+	position: absolute;
+	top: 50%;
+	right: 12px;
+	display: grid;
+	place-items: center;
+	width: 26px;
+	height: 26px;
+	color: var(--foreground);
+	opacity: 0;
+	transform: translateY(-50%);
+	transition: opacity 0.15s ease;
+}
+.command-code:hover .command-copy-hint,
+.command-code:focus-visible .command-copy-hint {
+	opacity: 1;
+}
+
+.command-card p {
+	flex: 1;
+	margin: 0;
+	min-height: 36px;
+	color: var(--muted-foreground);
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+/* Actions now live in their own footer row instead of floating over
+   the group/category badge — fixes the overlap from the old layout. */
+.command-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-top: 12px;
+	padding-top: 10px;
+	border-top: 1px solid var(--border);
+}
+.command-copy-btn {
+	border-radius: var(--radius);
+}
+.command-actions {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding: 2px;
+	background: var(--secondary);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	opacity: 0;
+	transition: opacity 0.15s ease;
+}
+.command-card:hover .command-actions,
+.command-card:focus-within .command-actions {
+	opacity: 1;
+}
+.command-actions button {
+	min-width: 30px;
+	width: 30px;
+	padding: 0;
+	font-size: 0;
+	color: var(--muted-foreground);
+	border-radius: calc(var(--radius) - 2px);
+}
+.command-actions button:hover {
+	color: var(--foreground);
+	background: var(--accent);
+}
+.command-delete-btn:hover {
+	color: var(--destructive);
+	background: color-mix(in oklab, var(--destructive) 12%, transparent);
+}
+
+.command-edit {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 10px;
+}
+.command-edit textarea,
+.command-edit input {
+	width: 100%;
+	padding: 9px 10px;
+	color: var(--foreground);
+	background: var(--input-surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	font: inherit;
+}
+.command-edit textarea {
+	min-height: 70px;
+	resize: vertical;
+}
+.command-edit > div {
+	display: flex;
+	gap: 8px;
+}
+
+.command-add {
+	position: sticky;
+	top: 18px;
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
+	padding: 18px;
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: calc(var(--radius) + 2px);
+	box-shadow: 0 4px 16px rgb(0 0 0 / 0.08);
+}
+.command-add h3 {
+	margin: 0;
+	font-size: 15px;
+}
+.command-add form {
+	display: flex;
+	flex-direction: column;
+	gap: 9px;
+	padding-top: 17px;
+	border-top: 1px solid var(--border);
+}
+.command-add form:first-of-type {
+	border-top: 0;
+	padding-top: 0;
+}
+.command-add h4 {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0;
+	color: var(--muted-foreground);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	font-size: 11px;
+}
+.command-add input:focus,
+.command-add textarea:focus {
+	border-color: var(--ring);
+	outline: none;
+}
+.command-add textarea {
+	min-height: 70px;
+	resize: vertical;
+}
+.command-add .add-submit {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	margin-top: 4px;
+	color: var(--primary-foreground);
+	background: var(--primary);
+}
+
+.empty-commands {
+	grid-column: 1 / -1;
+	padding: 30px;
+	color: var(--muted-foreground);
+	text-align: center;
+	border: 1px dashed var(--border);
+	border-radius: var(--radius);
+}
+
+.command-toast {
+	position: fixed;
+	right: 24px;
+	bottom: 24px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	max-width: 400px;
+	padding: 14px 16px;
+	color: var(--primary-foreground);
+	background: var(--primary);
+	border-radius: calc(var(--radius) + 2px);
+	box-shadow: 0 10px 30px rgb(0 0 0 / 0.2);
+	font-size: 13px;
+}
+
+.confirm-backdrop {
+	position: fixed;
+	z-index: 50;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	padding: 20px;
+	background: rgb(0 0 0 / 0.55);
+	backdrop-filter: blur(3px);
+}
+.confirm-dialog {
+	width: min(100%, 430px);
+	padding: 22px;
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: calc(var(--radius) + 4px);
+	box-shadow: 0 24px 70px rgb(0 0 0 / 0.4);
+}
+.confirm-dialog h3 {
+	margin: 0 0 9px;
+	font-size: 18px;
+}
+.confirm-dialog p {
+	margin: 0;
+	color: var(--muted-foreground);
+	line-height: 1.6;
+}
+.confirm-dialog code {
+	display: inline;
+	padding: 2px 4px;
+	color: var(--foreground);
+	background: var(--secondary);
+	border-radius: 4px;
+}
+.confirm-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	margin-top: 22px;
+}
+
+@media (max-width: 1350px) {
+	.command-results {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+@media (max-width: 900px) {
+	.command-layout {
+		grid-template-columns: 1fr;
+	}
+	.command-add {
+		position: static;
+	}
+	.command-results {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	.command-filters {
+		flex-wrap: wrap;
+	}
+	.filter-select {
+		flex: 1;
+		min-width: 0;
+	}
+	.command-search {
+		flex-basis: 100%;
+	}
+}
+@media (max-width: 620px) {
+	.command-results {
+		grid-template-columns: 1fr;
+	}
+	.command-filters {
+		align-items: stretch;
+	}
+}
+
+/* Defensive layout rules for Radix controls inside the desktop shell. */
+.command-filters > .filter-select { flex: 0 0 172px; width: 172px !important; min-width: 172px; }
+.command-add [role="combobox"] { width: 100% !important; min-width: 0; }
+.command-footer { display: contents; }
+.command-copy-btn { display: none !important; }
+.command-actions { position: absolute; top: 8px; right: 8px; z-index: 2; padding: 2px; }
+.command-card:hover .command-actions, .command-card:focus-within .command-actions { opacity: 1; }
+.command-meta { padding-right: 64px; }
+.command-add .add-submit { display: inline-flex !important; justify-content: center !important; align-items: center !important; width: 100%; color: #fff; background: #2563eb; border: 1px solid #2563eb; }
+.command-add .add-submit:hover { background: #1d4ed8; }

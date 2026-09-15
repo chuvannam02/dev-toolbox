@@ -1,0 +1,90 @@
+.time-converter {
+	max-width: 900px;
+}
+.time-converter-heading {
+	margin-bottom: 28px;
+}
+.time-converter h2 {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 8px;
+}
+.time-converter-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 18px;
+	padding: 22px;
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
+.time-converter label {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--foreground);
+}
+.time-converter input,
+.time-converter select {
+	height: 40px;
+	width: 100%;
+	padding: 0 11px;
+	color: var(--foreground);
+	background: var(--input-surface);
+	border: 1px solid var(--border);
+	border-radius: 6px;
+	font: inherit;
+	font-weight: 400;
+}
+.time-converter input:focus,
+.time-converter select:focus {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
+}
+.time-result {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	margin-top: 20px;
+	padding: 18px 20px;
+	background: var(--secondary);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
+.time-result span {
+	color: var(--muted-foreground);
+	font-size: 13px;
+}
+.time-result output {
+	flex: 1;
+	font-family: "Cascadia Code", Consolas, monospace;
+	font-size: 18px;
+	color: var(--foreground);
+}
+.time-result.invalid output {
+	color: var(--destructive);
+	font-size: 14px;
+}
+.format-hint {
+	margin-top: 16px;
+	padding: 13px 16px;
+	color: var(--muted-foreground);
+	font-size: 13px;
+	line-height: 1.7;
+}
+.format-hint code {
+	color: var(--foreground);
+}
+@media (max-width: 700px) {
+	.time-converter-grid {
+		grid-template-columns: 1fr;
+	}
+	.time-result {
+		align-items: flex-start;
+		flex-direction: column;
+		gap: 8px;
+	}
+}

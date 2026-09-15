@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { Check, Save } from "lucide-react";
+import { Button } from "./ui/button";
 import "./Notebook.css";
 
 type CellStatus = "idle" | "running" | "ok" | "error";
@@ -28,20 +30,23 @@ type CellOutputEvent = {
 
 let cellSeq = 0;
 const newCellId = () => `cell-${Date.now()}-${cellSeq++}`;
+const NOTEBOOK_DRAFT_KEY = "dev-toolbox:notebook-draft:v1";
 
 // Hàm lọc mã màu ANSI từ output của kernel để dễ đọc hơn
 const stripAnsi = (str: string) => str.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, "");
 
 const Notebook: React.FC = (): React.JSX.Element => {
-	const [cells, setCells] = useState<NotebookCell[]>([
-		{
-			id: newCellId(),
-			code: "",
-			outputs: [],
-			status: "idle",
-			execution_count: null,
-		},
-	]);
+	const [cells, setCells] = useState<NotebookCell[]>(() => {
+		try {
+			const draft = localStorage.getItem(NOTEBOOK_DRAFT_KEY);
+			if (draft) {
+				const parsed: unknown = JSON.parse(draft);
+				if (Array.isArray(parsed) && parsed.length) return parsed as NotebookCell[];
+			}
+		} catch { localStorage.removeItem(NOTEBOOK_DRAFT_KEY); }
+		return [{ id: newCellId(), code: "", outputs: [], status: "idle", execution_count: null }];
+	});
+	const [lastSaved, setLastSaved] = useState<Date | null>(null);
 	const [kernelReady, setKernelReady] = useState(false);
 	const [kernelBusy, setKernelBusy] = useState(false);
 	const [kernelError, setKernelError] = useState<string | null>(null);
@@ -118,6 +123,14 @@ const Notebook: React.FC = (): React.JSX.Element => {
 			if (unlistenFn) unlistenFn();
 		};
 	}, []);
+
+	useEffect(() => {
+		const timer = window.setTimeout(() => {
+			localStorage.setItem(NOTEBOOK_DRAFT_KEY, JSON.stringify(cells));
+			setLastSaved(new Date());
+		}, 600);
+		return () => window.clearTimeout(timer);
+	}, [cells]);
 
 	const updateCode = (id: string, code: string) => {
 		setCells((prev) => prev.map((c) => (c.id === id ? { ...c, code } : c)));
@@ -230,6 +243,11 @@ const Notebook: React.FC = (): React.JSX.Element => {
 		URL.revokeObjectURL(url);
 	};
 
+	const saveDraft = () => {
+		localStorage.setItem(NOTEBOOK_DRAFT_KEY, JSON.stringify(cells));
+		setLastSaved(new Date());
+	};
+
 	const processSqlFile = async (file: File) => {
 		if (!file.name.endsWith(".sql")) {
 			alert("Vui lòng chọn file .sql");
@@ -285,6 +303,12 @@ const Notebook: React.FC = (): React.JSX.Element => {
 							? `✕ ${kernelError}`
 							: "○ Starting kernel..."}
 				</span>
+				<span className="autosave-status" title="Bản nháp được lưu trong thiết bị này">
+					<Check size={14} /> {lastSaved ? `Đã tự lưu ${lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Đang chuẩn bị tự lưu"}
+				</span>
+				<Button variant="secondary" size="sm" onClick={saveDraft}>
+					<Save size={15} /> Lưu nháp
+				</Button>
 
 				<button onClick={() => addCell()}>+ Cell</button>
 				<button onClick={restartKernel} disabled={!kernelReady}>

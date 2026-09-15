@@ -11,7 +11,8 @@ export type AppTab =
 	| "writer"
 	| "jenkins"
 	| "notebook"
-	| "fakeDataGenerator";
+	| "fakeDataGenerator"
+	| "timeConverter";
 
 /** A reusable sidebar navigation item. */
 export interface NavigationItem {

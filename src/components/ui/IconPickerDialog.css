@@ -1,0 +1,130 @@
+.icon-picker-trigger {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	cursor: pointer;
+	border-radius: var(--radius);
+}
+.icon-picker-trigger:hover {
+	background: var(--accent);
+}
+
+.icon-picker-dialog {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: min(92vw, 420px);
+	max-height: min(640px, calc(100vh - 64px));
+	overflow-y: auto;
+}
+
+.icon-picker-search {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 0 10px;
+	margin-top: 4px;
+	color: var(--muted-foreground);
+	background: var(--input-surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+}
+.icon-picker-search:focus-within {
+	outline: 2px solid var(--ring);
+	outline-offset: 1px;
+	border-color: var(--ring);
+}
+.icon-picker-search input {
+	flex: 1;
+	height: 38px;
+	padding: 0;
+	color: var(--foreground);
+	background: transparent;
+	border: 0;
+	outline: none;
+	font: inherit;
+}
+.icon-picker-clear {
+	display: grid;
+	place-items: center;
+	width: 22px;
+	height: 22px;
+	color: var(--muted-foreground);
+	background: transparent;
+	border: 0;
+	border-radius: 999px;
+	cursor: pointer;
+}
+.icon-picker-clear:hover {
+	color: var(--foreground);
+	background: var(--secondary);
+}
+
+.icon-picker-count {
+	margin: 8px 2px;
+	color: var(--muted-foreground);
+	font-size: 12px;
+}
+
+.icon-grid-viewport {
+	position: relative;
+	overflow-y: auto;
+	overflow-x: hidden;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--card);
+}
+.icon-grid-spacer {
+	position: relative;
+	width: 100%;
+}
+.icon-grid-cell {
+	position: absolute;
+	display: grid;
+	place-items: center;
+	width: 48px;
+	height: 48px;
+	margin: 4px;
+	color: var(--muted-foreground);
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: var(--radius);
+	cursor: pointer;
+	transition:
+		background 0.12s ease,
+		border-color 0.12s ease,
+		color 0.12s ease,
+		transform 0.12s ease;
+}
+.icon-grid-cell:hover {
+	color: var(--foreground);
+	background: var(--accent);
+}
+.icon-grid-cell.selected {
+	color: var(--primary-foreground);
+	background: var(--primary);
+	border-color: var(--primary);
+}
+.icon-grid-empty {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	color: var(--muted-foreground);
+	font-size: 13px;
+}
+.icon-fallback {
+	display: inline-block;
+	border-radius: 999px;
+	background: var(--secondary);
+	animation: icon-skeleton-pulse 1.1s ease-in-out infinite;
+}
+@keyframes icon-skeleton-pulse {
+	0%,
+	100% {
+		opacity: 0.35;
+	}
+	50% {
+		opacity: 0.9;
+	}
+}

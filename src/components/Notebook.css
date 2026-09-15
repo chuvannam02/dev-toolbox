@@ -168,3 +168,18 @@
 	color: #f28b82;
 	background: #2a1e1e;
 }
+
+/* Theme tokens keep the notebook consistent with the application mode. */
+.notebook { background: var(--background); color: var(--foreground); }
+.notebook-toolbar { background: var(--card); border-color: var(--border); flex-wrap: wrap; }
+.notebook-toolbar button { background: var(--secondary); color: var(--secondary-foreground); }
+.notebook-toolbar button:hover:not(:disabled) { background: var(--accent); }
+.autosave-status { display: inline-flex; align-items: center; gap: 5px; color: var(--muted-foreground); font-size: 12px; }
+.notebook-cell { background: var(--card); border-color: var(--border); }
+.cell-gutter { background: var(--secondary); color: var(--muted-foreground); }
+.cell-editor { background: var(--background); color: var(--foreground); }
+.cell-editor::placeholder { color: var(--muted-foreground); }
+.cell-actions { background: var(--secondary); border-color: var(--border); }
+.cell-actions button { background: var(--card); color: var(--foreground); }
+.cell-actions button:hover:not(:disabled) { background: var(--accent); }
+.cell-output { background: var(--secondary); color: var(--foreground); border-color: var(--border); }
