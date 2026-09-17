@@ -1,8 +1,63 @@
 import { invoke } from "@tauri-apps/api/core";
-import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import {
+	Rocket,
+	FolderOpen,
+	GitBranch,
+	Coffee,
+	Code2,
+	Database,
+	Globe,
+	FileText,
+	Folder,
+	Plus,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+
+import { Button } from "../components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardHeader,
+	CardTitle,
+} from "../components/ui/card";
+import { Checkbox } from "../components/ui/checkbox";
+import { Input } from "../components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "../components/ui/select";
+import { cn } from "../lib/utils";
 
 type AppItem = { id?: number; name: string; path: string; icon: string };
+
+// Map các key icon (lưu trong DB) sang component Lucide tương ứng
+// Giữ icon ở dạng key string để tương thích với field `icon: String` bên Rust
+const ICON_MAP: Record<string, React.ElementType> = {
+	folder: Folder,
+	git: GitBranch,
+	java: Coffee,
+	vscode: Code2,
+	database: Database,
+	chrome: Globe,
+};
+
+const ICON_OPTIONS: { value: string; label: string }[] = [
+	{ value: "folder", label: "Folder" },
+	{ value: "git", label: "GitLab / Git" },
+	{ value: "java", label: "IntelliJ / Java" },
+	{ value: "vscode", label: "VS Code" },
+	{ value: "database", label: "DBeaver / SQL" },
+	{ value: "chrome", label: "Chrome" },
+];
+
+function AppIcon({ icon, className }: { icon: string; className?: string }) {
+	const Icon = ICON_MAP[icon] ?? Folder;
+	return <Icon className={className} />;
+}
 
 const Workspace: React.FC = (): React.JSX.Element => {
 	// --- WORKSPACE LAUNCHER STATE ---
@@ -10,7 +65,7 @@ const Workspace: React.FC = (): React.JSX.Element => {
 	const [selectedApps, setSelectedApps] = useState<Set<number>>(new Set());
 	const [newAppName, setNewAppName] = useState("");
 	const [newAppPath, setNewAppPath] = useState("");
-	const [newAppIcon, setNewAppIcon] = useState("📁");
+	const [newAppIcon, setNewAppIcon] = useState("folder");
 
 	useEffect(() => {
 		loadApps();
@@ -51,8 +106,10 @@ const Workspace: React.FC = (): React.JSX.Element => {
 		const pathsToLaunch = apps
 			.filter((a) => a.id && selectedApps.has(a.id))
 			.map((a) => a.path);
-		if (pathsToLaunch.length === 0)
-			return alert("Vui lòng tick chọn ít nhất 1 ứng dụng!");
+		if (pathsToLaunch.length === 0) {
+			alert("Vui lòng tick chọn ít nhất 1 ứng dụng!");
+			return;
+		}
 		try {
 			await invoke("launch_items", { paths: pathsToLaunch });
 		} catch (error) {
@@ -62,7 +119,7 @@ const Workspace: React.FC = (): React.JSX.Element => {
 
 	// --- Xử lý chọn File/Folder bằng Native Dialog ---
 	async function handleBrowseFile() {
-		const selected = open({
+		const selected = await open({
 			multiple: false,
 			directory: false, // Chọn File
 			filters: [
@@ -97,158 +154,141 @@ const Workspace: React.FC = (): React.JSX.Element => {
 	}
 
 	return (
-		<div className="view-container">
-			<div className="toolbar" style={{ marginBottom: "20px" }}>
-				<h2>🚀 1-Click Workspace Launcher</h2>
-				<button
+		<div className="flex flex-col gap-6 p-6">
+			{/* Toolbar */}
+			<div className="flex items-center justify-between">
+				<div className="flex items-center gap-2">
+					<Rocket className="h-5 w-5 text-primary" />
+					<h2 className="text-lg font-semibold tracking-tight">
+						Workspace Launcher
+					</h2>
+				</div>
+				<Button
 					onClick={handleLaunchSelected}
-					className="btn-primary"
-					style={{ background: "#4caf50" }}
+					disabled={selectedApps.size === 0}
+					className="gap-2"
 				>
-					Khởi động App đã chọn ({selectedApps.size})
-				</button>
+					<Rocket className="h-4 w-4" />
+					Khởi động ({selectedApps.size})
+				</Button>
 			</div>
 
 			{/* Form thêm App/Folder */}
-			<form
-				onSubmit={handleAddApp}
-				style={{
-					display: "flex",
-					gap: "10px",
-					marginBottom: "20px",
-				}}
-			>
-				<select
-					value={newAppIcon}
-					onChange={(e) => setNewAppIcon(e.target.value)}
-					style={{
-						padding: "8px",
-						background: "#3c3c3c",
-						color: "white",
-						border: "none",
-						borderRadius: "4px",
-					}}
-				>
-					<option value="📁">📁 Folder</option>
-					<option value="🦊">🦊 GitLab/Git</option>
-					<option value="☕">☕ IntelliJ/Java</option>
-					<option value="🔷">🔷 VS Code</option>
-					<option value="🗄️">🗄️ DBeaver/SQL</option>
-					<option value="🌐">🌐 Chrome</option>
-				</select>
+			<Card>
+				<CardContent className="pt-6">
+					<form onSubmit={handleAddApp} className="flex flex-wrap items-end gap-3">
+						<div className="flex flex-col gap-1.5">
+							<label className="text-xs text-muted-foreground">Icon</label>
+							<Select value={newAppIcon} onValueChange={setNewAppIcon}>
+								<SelectTrigger className="w-[180px]">
+									<SelectValue>
+										<span className="flex items-center gap-2">
+											<AppIcon icon={newAppIcon} className="h-4 w-4" />
+											{ICON_OPTIONS.find((o) => o.value === newAppIcon)?.label}
+										</span>
+									</SelectValue>
+								</SelectTrigger>
+								<SelectContent>
+									{ICON_OPTIONS.map((opt) => (
+										<SelectItem key={opt.value} value={opt.value}>
+											<span className="flex items-center gap-2">
+												<AppIcon icon={opt.value} className="h-4 w-4" />
+												{opt.label}
+											</span>
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
 
-				<input
-					value={newAppName}
-					onChange={(e) => setNewAppName(e.target.value)}
-					placeholder="Tên (vd: Backend Code)"
-					style={{ flex: 1 }}
-					required
-					className="input-dark"
-				/>
+						<div className="flex min-w-[180px] flex-1 flex-col gap-1.5">
+							<label className="text-xs text-muted-foreground">Tên</label>
+							<Input
+								value={newAppName}
+								onChange={(e) => setNewAppName(e.target.value)}
+								placeholder="vd: Backend Code"
+								required
+							/>
+						</div>
 
-				{/* --- KHU VỰC ĐƯỜNG DẪN CÓ NÚT BROWSE --- */}
-				<div style={{ display: "flex", flex: 2, gap: "5px" }}>
-					<input
-						value={newAppPath}
-						onChange={(e) => setNewAppPath(e.target.value)}
-						placeholder="Đường dẫn (vd: D:\projects\spring-boot)"
-						style={{ flex: 1, minWidth: "0" }}
-						required
-						className="input-dark"
-					/>
-					<button
-						type="button"
-						onClick={handleBrowseFile}
-						className="btn-primary"
-						style={{
-							background: "#555",
-							padding: "0 12px",
-						}}
-						title="Chọn File"
-					>
-						📄
-					</button>
-					<button
-						type="button"
-						onClick={handleBrowseFolder}
-						className="btn-primary"
-						style={{
-							background: "#555",
-							padding: "0 12px",
-						}}
-						title="Chọn Thư mục"
-					>
-						📁
-					</button>
-				</div>
-				{/* --- KẾT THÚC KHU VỰC ĐƯỜNG DẪN --- */}
-
-				<button type="submit" className="btn-primary">
-					+ Thêm
-				</button>
-			</form>
-
-			{/* Danh sách Apps để Tick chọn */}
-			<div
-				className="app-grid"
-				style={{
-					display: "grid",
-					gridTemplateColumns:
-						"repeat(auto-fill, minmax(250px, 1fr))",
-					gap: "15px",
-				}}
-			>
-				{apps.map((app) => (
-					<div
-						key={app.id}
-						onClick={() => app.id && toggleSelect(app.id)}
-						style={{
-							background: "#252526",
-							padding: "15px",
-							borderRadius: "8px",
-							border: selectedApps.has(app.id!)
-								? "2px solid #007acc"
-								: "2px solid transparent",
-							cursor: "pointer",
-							display: "flex",
-							alignItems: "center",
-							gap: "15px",
-						}}
-					>
-						<input
-							type="checkbox"
-							checked={selectedApps.has(app.id!)}
-							readOnly
-							style={{
-								width: "18px",
-								height: "18px",
-							}}
-						/>
-						<div style={{ fontSize: "24px" }}>{app.icon}</div>
-						<div style={{ overflow: "hidden" }}>
-							<div
-								style={{
-									fontWeight: "bold",
-									color: "#fff",
-								}}
-							>
-								{app.name}
-							</div>
-							<div
-								style={{
-									fontSize: "11px",
-									color: "#858585",
-									whiteSpace: "nowrap",
-									textOverflow: "ellipsis",
-									overflow: "hidden",
-								}}
-							>
-								{app.path}
+						<div className="flex min-w-[280px] flex-[2] flex-col gap-1.5">
+							<label className="text-xs text-muted-foreground">Đường dẫn</label>
+							<div className="flex gap-1.5">
+								<Input
+									value={newAppPath}
+									onChange={(e) => setNewAppPath(e.target.value)}
+									placeholder="vd: D:\projects\spring-boot"
+									required
+									className="min-w-0 flex-1"
+								/>
+								<Button
+									type="button"
+									variant="secondary"
+									size="icon"
+									onClick={handleBrowseFile}
+									title="Chọn File"
+								>
+									<FileText className="h-4 w-4" />
+								</Button>
+								<Button
+									type="button"
+									variant="secondary"
+									size="icon"
+									onClick={handleBrowseFolder}
+									title="Chọn Thư mục"
+								>
+									<FolderOpen className="h-4 w-4" />
+								</Button>
 							</div>
 						</div>
-					</div>
-				))}
-			</div>
+
+						<Button type="submit" className="gap-2">
+							<Plus className="h-4 w-4" />
+							Thêm
+						</Button>
+					</form>
+				</CardContent>
+			</Card>
+
+			{/* Danh sách Apps để Tick chọn */}
+			{apps.length === 0 ? (
+				<div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-16 text-muted-foreground">
+					<Folder className="h-8 w-8" />
+					<p className="text-sm">Chưa có ứng dụng nào. Thêm một cái ở trên.</p>
+				</div>
+			) : (
+				<div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-3">
+					{apps.map((app) => (
+						<Card
+							key={app.id}
+							onClick={() => app.id && toggleSelect(app.id)}
+							className={cn(
+								"cursor-pointer gap-0 py-4 transition-colors hover:bg-accent/50",
+								app.id && selectedApps.has(app.id)
+									? "border-primary ring-1 ring-primary"
+									: "border-border",
+							)}
+						>
+							<CardContent className="flex items-center gap-3 px-4">
+								<Checkbox
+									checked={app.id ? selectedApps.has(app.id) : false}
+									onCheckedChange={() => app.id && toggleSelect(app.id)}
+									onClick={(e) => e.stopPropagation()}
+								/>
+								<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
+									<AppIcon icon={app.icon} className="h-4.5 w-4.5" />
+								</div>
+								<div className="min-w-0">
+									<div className="truncate font-medium">{app.name}</div>
+									<div className="truncate text-xs text-muted-foreground">
+										{app.path}
+									</div>
+								</div>
+							</CardContent>
+						</Card>
+					))}
+				</div>
+			)}
 		</div>
 	);
 };
