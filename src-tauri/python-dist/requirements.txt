@@ -1,0 +1,6 @@
+jupyter_client
+ipykernel
+websockets
+pg8000
+pymysql
+oracledb

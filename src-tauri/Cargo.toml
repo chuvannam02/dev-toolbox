@@ -1,0 +1,61 @@
+[package]
+name = "dev-toolbox"
+version = "0.1.0"
+description = "A Developer Toolbox"
+authors = ["You"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.0.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.11.1", features = [] }
+tauri-plugin-shell = "2.3.6"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# Sử dụng rusqlite để quản lý DB cục bộ
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+# Sử dụng keyring để gọi Windows DPAPI/Credential Manager mã hóa password an toàn
+keyring = "4.2.0"
+sqlformat = "0.5.0"       # Dùng để format SQL
+quick-xml = "0.42.0"      # Dùng để parse/detect XML
+rust_xlsxwriter = "0.99.0"
+dirs = "6.0.0"
+tauri-plugin-opener = "2.5.5"
+chrono = "0.4" # Thêm dòng này để xử lý thời gian xuất file
+csv = "1.3.0"
+tauri-plugin-dialog = "2.7.3"
+reqwest = { version = "0.13.4", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+# Để Rust có thể gọi REST API của Jenkins và xử lý luồng chạy ngầm (background streaming), chúng ta cần thêm reqwest (HTTP Client) và tokio (Async runtime).tokio-tungstenite = "0.24"
+futures-util = { version = "0.3", features = ["sink"] }
+tokio-tungstenite = "0.30.0"
+once_cell = "1"
+fake = { version = "5.1.0", features = ["chrono"] }
+rand = "0.8"
+uuid = { version = "1.26.0", features = ["v4"] }
+tauri-plugin-store = "2.4.4"
+
+# Oracle
+oracle = "0.6.3"
+
+# SQL Server
+tiberius = {
+    version = "0.12.3",
+    default-features = false,
+    features = ["rustls", "tds73"]
+}
+
+tokio-util = { version = "0.7", features = ["compat"] }
+sqlx = {
+    version = "0.9",
+    default-features = false,
+    features = [
+        "runtime-tokio",
+        "tls-rustls",
+        "postgres",
+        "mysql"
+    ]
+}
+
+urlencoding = "2"
