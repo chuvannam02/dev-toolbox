@@ -14,6 +14,14 @@ use tokio::time::sleep;
 mod fake_data;
 mod database;
 mod notebook;
+mod docker_logs;
+mod commands;
+
+use docker_logs::{
+    get_docker_containers,
+    get_docker_logs,
+    install_ssh_key,
+};
 
 #[tauri::command]
 async fn trigger_jenkins_job(
@@ -190,114 +198,6 @@ fn analyze_build_log(log_text: String) -> LogAnalysis {
 }
 
 // ĐỪNG QUÊN ĐĂNG KÝ HÀM: .invoke_handler(tauri::generate_handler![..., analyze_build_log])
-
-// --- CẤU HÌNH SSH ---
-#[derive(Deserialize)]
-pub struct SshConfig {
-    pub enabled: bool,
-    pub host: String,
-    pub user: String,
-    pub port: String,
-    pub key_path: String,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct DockerContainer {
-    pub id: String,
-    pub name: String,
-    pub status: String,
-    pub image: String,
-}
-
-// 1. LẤY DANH SÁCH CONTAINER (Hỗ trợ Local & SSH)
-#[tauri::command]
-fn get_docker_containers(ssh: SshConfig) -> Result<Vec<DockerContainer>, String> {
-    // Nếu dùng SSH thì gọi lệnh `ssh`, nếu không thì gọi `docker` trực tiếp
-    let mut cmd = Command::new(if ssh.enabled { "ssh" } else { "docker" });
-
-    if ssh.enabled {
-        cmd.arg("-i").arg(&ssh.key_path);
-        cmd.arg("-p").arg(&ssh.port);
-        cmd.arg("-o").arg("StrictHostKeyChecking=no"); // Bỏ qua câu hỏi yes/no của SSH
-        cmd.arg(format!("{}@{}", ssh.user, ssh.host));
-        cmd.arg("docker"); // Lệnh chạy trên remote
-    }
-
-    cmd.args([
-        "ps",
-        "-a",
-        "--format",
-        "{{.ID}}|{{.Names}}|{{.Status}}|{{.Image}}",
-    ]);
-
-    let output = cmd
-        .output()
-        .map_err(|e| format!("Lỗi thực thi lệnh: {}", e))?;
-
-    if !output.status.success() {
-        return Err(String::from_utf8_lossy(&output.stderr).to_string());
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let mut containers = Vec::new();
-
-    for line in stdout.lines() {
-        let parts: Vec<&str> = line.split('|').collect();
-        if parts.len() == 4 {
-            containers.push(DockerContainer {
-                id: parts[0].to_string(),
-                name: parts[1].to_string(),
-                status: parts[2].to_string(),
-                image: parts[3].to_string(),
-            });
-        }
-    }
-    Ok(containers)
-}
-
-// 2. LẤY LOGS (Hỗ trợ Local & SSH)
-#[tauri::command]
-fn get_docker_logs(
-    container_id: String,
-    tail: String,
-    grep: String,
-    ssh: SshConfig,
-) -> Result<String, String> {
-    let mut cmd = Command::new(if ssh.enabled { "ssh" } else { "docker" });
-
-    if ssh.enabled {
-        cmd.arg("-i").arg(&ssh.key_path);
-        cmd.arg("-p").arg(&ssh.port);
-        cmd.arg("-o").arg("StrictHostKeyChecking=no");
-        cmd.arg(format!("{}@{}", ssh.user, ssh.host));
-        cmd.arg("docker");
-    }
-
-    let mut args = vec!["logs".to_string()];
-    if tail != "all" {
-        args.push(format!("--tail={}", tail));
-    }
-    args.push(container_id);
-
-    cmd.args(&args);
-
-    let output = cmd.output().map_err(|e| e.to_string())?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let combined = format!("{}{}", stdout, stderr);
-
-    if !grep.trim().is_empty() {
-        let term = grep.to_lowercase();
-        let filtered: Vec<&str> = combined
-            .lines()
-            .filter(|line| line.to_lowercase().contains(&term))
-            .collect();
-        return Ok(filtered.join("\n"));
-    }
-
-    Ok(combined)
-}
 
 // --- THÊM STRUCT CHO LAUNCHER ---
 #[derive(Serialize, Deserialize, Clone)]
@@ -746,6 +646,7 @@ pub fn run() {
             execute_ansible,
             get_docker_containers,
             get_docker_logs,
+            install_ssh_key,
             check_grammar,
             analyze_build_log,
             trigger_jenkins_job,
@@ -757,6 +658,7 @@ pub fn run() {
             database::describe_database_table,
             notebook::execute_cell,
             notebook::restart_kernel,
+			commands::cron::preview_cron,
         ])
         .run(tauri::generate_context!())
         .expect("Lỗi khi chạy ứng dụng Tauri");

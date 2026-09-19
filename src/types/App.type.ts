@@ -12,7 +12,24 @@ export type AppTab =
 	| "jenkins"
 	| "notebook"
 	| "fakeDataGenerator"
-	| "timeConverter";
+	| "timeConverter"
+	| "commands"
+	| "apiClient"
+	| "websocketSse"
+	| "jwtInspector"
+	| "kubernetes"
+	| "networkToolbox"
+	| "cronBuilder"
+	| "tlsChecker"
+	| "database"
+	| "redis"
+	| "kafka"
+	| "logAnalyzer"
+	| "springBootInspector"
+	| "portProcessInspector"
+	| "environmentDiff"
+	| "secretScanner"
+	| "hashGenerator";
 
 /** A reusable sidebar navigation item. */
 export interface NavigationItem {
