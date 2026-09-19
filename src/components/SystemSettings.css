@@ -1,0 +1,80 @@
+.system-settings {
+	max-width: 860px;
+	margin: 0 auto;
+	padding: 12px 0 36px;
+}
+.settings-heading {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	margin-bottom: 28px;
+}
+.settings-heading-icon,
+.setting-icon {
+	display: grid;
+	place-items: center;
+	border-radius: 10px;
+	color: var(--primary-foreground);
+	background: var(--primary);
+}
+.settings-heading-icon {
+	width: 46px;
+	height: 46px;
+}
+.settings-heading h2 {
+	margin: 0 0 5px;
+}
+.settings-heading p,
+.setting-copy p {
+	margin: 0;
+}
+.settings-card {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	padding: 20px;
+	margin-bottom: 12px;
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	background: var(--card);
+}
+.setting-icon {
+	width: 40px;
+	height: 40px;
+	flex: 0 0 auto;
+	background: var(--secondary);
+	color: var(--secondary-foreground);
+}
+.setting-copy {
+	flex: 1;
+	min-width: 0;
+}
+.setting-copy h3 {
+	margin: 0 0 5px;
+	font-size: 15px;
+}
+.setting-copy p {
+	font-size: 13px;
+	line-height: 1.45;
+}
+.settings-card button {
+	flex: 0 0 auto;
+	gap: 7px;
+}
+.settings-status {
+	margin-top: 18px;
+	padding: 12px 14px;
+	border-radius: 8px;
+	background: var(--secondary);
+	color: var(--secondary-foreground) !important;
+}
+@media (max-width: 640px) {
+	.settings-card {
+		align-items: flex-start;
+		flex-wrap: wrap;
+	}
+	.settings-card > button,
+	.settings-card > [role="switch"] {
+		margin-left: 56px;
+	}
+}

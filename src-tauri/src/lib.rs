@@ -281,6 +281,68 @@ struct AppState {
     db: Mutex<Connection>,
 }
 
+const AUTOSTART_REGISTRY_KEY: &str = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+const AUTOSTART_VALUE_NAME: &str = "DevToolbox";
+
+#[tauri::command]
+fn get_launch_at_login() -> Result<bool, String> {
+    #[cfg(target_os = "windows")]
+    {
+        let output = Command::new("reg")
+            .args(["query", AUTOSTART_REGISTRY_KEY, "/v", AUTOSTART_VALUE_NAME])
+            .output()
+            .map_err(|error| format!("Không thể đọc cấu hình khởi động: {error}"))?;
+        Ok(output.status.success())
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        Err("Khởi động cùng hệ thống hiện được hỗ trợ trên Windows.".into())
+    }
+}
+
+#[tauri::command]
+fn set_launch_at_login(enabled: bool) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        if enabled {
+            let executable = std::env::current_exe()
+                .map_err(|error| format!("Không xác định được file ứng dụng: {error}"))?;
+            let command = format!("\"{}\"", executable.display());
+            let output = Command::new("reg")
+                .args(["add", AUTOSTART_REGISTRY_KEY, "/v", AUTOSTART_VALUE_NAME, "/t", "REG_SZ", "/d", &command, "/f"])
+                .output()
+                .map_err(|error| format!("Không thể bật khởi động cùng hệ thống: {error}"))?;
+            if !output.status.success() {
+                return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+            }
+        } else {
+            let output = Command::new("reg")
+                .args(["delete", AUTOSTART_REGISTRY_KEY, "/v", AUTOSTART_VALUE_NAME, "/f"])
+                .output()
+                .map_err(|error| format!("Không thể tắt khởi động cùng hệ thống: {error}"))?;
+            if !output.status.success() && !String::from_utf8_lossy(&output.stderr).contains("unable to find") {
+                return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+            }
+        }
+        Ok(())
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = enabled;
+        Err("Khởi động cùng hệ thống hiện được hỗ trợ trên Windows.".into())
+    }
+}
+
+#[tauri::command]
+fn clear_app_cache(app: AppHandle) -> Result<(), String> {
+    let cache_dir = app.path().app_cache_dir().map_err(|error| error.to_string())?;
+    if cache_dir.exists() {
+        std::fs::remove_dir_all(&cache_dir).map_err(|error| format!("Không thể xóa cache: {error}"))?;
+    }
+    std::fs::create_dir_all(&cache_dir).map_err(|error| format!("Không thể tạo lại cache: {error}"))?;
+    Ok(())
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct Credential {
     pub id: i32,
@@ -658,7 +720,10 @@ pub fn run() {
             database::describe_database_table,
             notebook::execute_cell,
             notebook::restart_kernel,
-			commands::cron::preview_cron,
+            commands::cron::preview_cron,
+            get_launch_at_login,
+            set_launch_at_login,
+            clear_app_cache,
         ])
         .run(tauri::generate_context!())
         .expect("Lỗi khi chạy ứng dụng Tauri");

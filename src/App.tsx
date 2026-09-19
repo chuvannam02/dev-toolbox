@@ -29,6 +29,9 @@ import {
 	PinOff,
 	Star,
 	WandSparkles,
+	Settings,
+	PanelLeftClose,
+	PanelLeftOpen,
 } from "lucide-react";
 import "./App.css";
 import { AppTab, Credential } from "./types/App.type";
@@ -43,12 +46,57 @@ import {
 
 const NAVIGATION_GROUPS = [
 	{ id: "workspace", label: "Workspace", tabs: ["workspace", "notebook"] },
-	{ id: "development", label: "Development", tabs: ["apiClient", "websocketSse", "jwtInspector", "formatter", "diff", "fakeDataGenerator", "commands"] },
-	{ id: "devops", label: "DevOps", tabs: ["docker", "kubernetes", "ansible", "jenkins", "networkToolbox", "cronBuilder", "tlsChecker"] },
-	{ id: "data", label: "Data", tabs: ["database", "redis", "kafka", "excel"] },
-	{ id: "debugging", label: "Debugging", tabs: ["logAnalyzer", "springBootInspector", "portProcessInspector", "environmentDiff"] },
-	{ id: "security", label: "Security", tabs: ["vault", "secretScanner", "jwtInspector", "hashGenerator"] },
-	{ id: "quick-tools", label: "Quick Tools", tabs: ["cheatsheet", "timeConverter", "writer"] },
+	{
+		id: "development",
+		label: "Development",
+		tabs: [
+			"apiClient",
+			"websocketSse",
+			"jwtInspector",
+			"formatter",
+			"diff",
+			"fakeDataGenerator",
+			"commands",
+		],
+	},
+	{
+		id: "devops",
+		label: "DevOps",
+		tabs: [
+			"docker",
+			"kubernetes",
+			"ansible",
+			"jenkins",
+			"networkToolbox",
+			"cronBuilder",
+			"tlsChecker",
+		],
+	},
+	{
+		id: "data",
+		label: "Data",
+		tabs: ["database", "redis", "kafka", "excel"],
+	},
+	{
+		id: "debugging",
+		label: "Debugging",
+		tabs: [
+			"logAnalyzer",
+			"springBootInspector",
+			"portProcessInspector",
+			"environmentDiff",
+		],
+	},
+	{
+		id: "security",
+		label: "Security",
+		tabs: ["vault", "secretScanner", "jwtInspector", "hashGenerator"],
+	},
+	{
+		id: "quick-tools",
+		label: "Quick Tools",
+		tabs: ["cheatsheet", "timeConverter", "writer"],
+	},
 ] as const satisfies ReadonlyArray<{
 	id: string;
 	label: string;
@@ -57,6 +105,7 @@ const NAVIGATION_GROUPS = [
 
 const FAVORITES_STORAGE_KEY = "dev-toolbox:favorites";
 const COLLAPSED_GROUPS_STORAGE_KEY = "dev-toolbox:collapsed-groups";
+const SIDEBAR_COLLAPSED_STORAGE_KEY = "dev-toolbox:sidebar-collapsed";
 
 const BilingualWriter = lazy(() => import("./components/BilingualWriter"));
 const JenkinsController = lazy(() => import("./components/JenkinsController"));
@@ -83,11 +132,18 @@ const Database = lazy(() => import("./components/tools/Database"));
 const Redis = lazy(() => import("./components/tools/Redis"));
 const Kafka = lazy(() => import("./components/tools/Kafka"));
 const LogAnalyzer = lazy(() => import("./components/tools/LogAnalyzer"));
-const SpringBootInspector = lazy(() => import("./components/tools/SpringBootInspector"));
-const PortProcessInspector = lazy(() => import("./components/tools/PortProcessInspector"));
-const EnvironmentDiff = lazy(() => import("./components/tools/EnvironmentDiff"));
+const SpringBootInspector = lazy(
+	() => import("./components/tools/SpringBootInspector"),
+);
+const PortProcessInspector = lazy(
+	() => import("./components/tools/PortProcessInspector"),
+);
+const EnvironmentDiff = lazy(
+	() => import("./components/tools/EnvironmentDiff"),
+);
 const SecretScanner = lazy(() => import("./components/tools/SecretScanner"));
 const HashGenerator = lazy(() => import("./components/tools/HashGenerator"));
+const SystemSettings = lazy(() => import("./components/SystemSettings"));
 
 const TAB_COMPONENTS = {
 	docker: DockerLogs,
@@ -103,11 +159,23 @@ const TAB_COMPONENTS = {
 	fakeDataGenerator: FakeDataGenerator,
 	timeConverter: TimeConverter,
 	commands: Commands,
-	apiClient: ApiClient, websocketSse: WebSocketSse, jwtInspector: JwtInspector,
-	kubernetes: Kubernetes, networkToolbox: NetworkToolbox, cronBuilder: CronBuilder, tlsChecker: TlsChecker,
-	database: Database, redis: Redis, kafka: Kafka, logAnalyzer: LogAnalyzer,
-	springBootInspector: SpringBootInspector, portProcessInspector: PortProcessInspector,
-	environmentDiff: EnvironmentDiff, secretScanner: SecretScanner, hashGenerator: HashGenerator,
+	apiClient: ApiClient,
+	websocketSse: WebSocketSse,
+	jwtInspector: JwtInspector,
+	kubernetes: Kubernetes,
+	networkToolbox: NetworkToolbox,
+	cronBuilder: CronBuilder,
+	tlsChecker: TlsChecker,
+	database: Database,
+	redis: Redis,
+	kafka: Kafka,
+	logAnalyzer: LogAnalyzer,
+	springBootInspector: SpringBootInspector,
+	portProcessInspector: PortProcessInspector,
+	environmentDiff: EnvironmentDiff,
+	secretScanner: SecretScanner,
+	hashGenerator: HashGenerator,
+	settings: SystemSettings,
 } as const;
 const NAVIGATION_ICONS: Record<AppTab, ComponentType<{ size?: number }>> = {
 	docker: Boxes,
@@ -124,10 +192,23 @@ const NAVIGATION_ICONS: Record<AppTab, ComponentType<{ size?: number }>> = {
 	fakeDataGenerator: Code2,
 	timeConverter: Clock3,
 	commands: Code2,
-	apiClient: Code2, websocketSse: Code2, jwtInspector: KeyRound, kubernetes: Boxes,
-	networkToolbox: TerminalSquare, cronBuilder: Clock3, tlsChecker: KeyRound, database: FileSpreadsheet,
-	redis: Code2, kafka: Code2, logAnalyzer: TerminalSquare, springBootInspector: Bot,
-	portProcessInspector: TerminalSquare, environmentDiff: FileDiff, secretScanner: KeyRound, hashGenerator: Braces,
+	apiClient: Code2,
+	websocketSse: Code2,
+	jwtInspector: KeyRound,
+	kubernetes: Boxes,
+	networkToolbox: TerminalSquare,
+	cronBuilder: Clock3,
+	tlsChecker: KeyRound,
+	database: FileSpreadsheet,
+	redis: Code2,
+	kafka: Code2,
+	logAnalyzer: TerminalSquare,
+	springBootInspector: Bot,
+	portProcessInspector: TerminalSquare,
+	environmentDiff: FileDiff,
+	secretScanner: KeyRound,
+	hashGenerator: Braces,
+	settings: Settings,
 };
 
 function App() {
@@ -156,6 +237,9 @@ function App() {
 		}
 	});
 	const [isFavoriteDropActive, setIsFavoriteDropActive] = useState(false);
+	const [sidebarCollapsed, setSidebarCollapsed] = useState(
+		() => localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "true",
+	);
 	const navigationById = useMemo(
 		() => new Map(NAVIGATION_ITEMS.map((item) => [item.id, item])),
 		[],
@@ -196,6 +280,12 @@ function App() {
 			JSON.stringify(collapsedGroups),
 		);
 	}, [collapsedGroups]);
+	useEffect(() => {
+		localStorage.setItem(
+			SIDEBAR_COLLAPSED_STORAGE_KEY,
+			String(sidebarCollapsed),
+		);
+	}, [sidebarCollapsed]);
 	const toggleFavorite = (tab: AppTab) => {
 		setFavoriteTabs((current) =>
 			current.includes(tab)
@@ -252,7 +342,9 @@ function App() {
 	return (
 		<TooltipProvider>
 			<div className="workbench">
-				<aside className="sidebar">
+				<aside
+					className={`sidebar ${sidebarCollapsed ? "is-collapsed" : ""}`}
+				>
 					<div className="sidebar-header">
 						<h3 className="sidebar-title">Dev Toolbox</h3>
 						<Button
@@ -300,13 +392,24 @@ function App() {
 									const Icon = NAVIGATION_ICONS[id];
 									return (
 										<div className="nav-item-row" key={id}>
-											<button
-												className={`nav-btn ${activeTab === id ? "active" : ""}`}
-												onClick={() => setActiveTab(id)}
-											>
-												<Icon size={16} />
-												<span>{item.label}</span>
-											</button>
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<button
+														className={`nav-btn ${activeTab === id ? "active" : ""}`}
+														onClick={() =>
+															setActiveTab(id)
+														}
+													>
+														<Icon size={16} />
+														<span>
+															{item.label}
+														</span>
+													</button>
+												</TooltipTrigger>
+												<TooltipContent side="right">
+													{item.label}
+												</TooltipContent>
+											</Tooltip>
 											<Tooltip>
 												<TooltipTrigger asChild>
 													<Button
@@ -359,7 +462,7 @@ function App() {
 											}
 										/>
 									</button>
-									{!isCollapsed && (
+									{(!isCollapsed || sidebarCollapsed) && (
 										<div className="nav-group-items">
 											{group.tabs.map((id) => {
 												const item =
@@ -410,31 +513,48 @@ function App() {
 																thích
 															</TooltipContent>
 														</Tooltip>
-														<button
-															draggable
-															className={`nav-btn ${activeTab === id ? "active" : ""}`}
-															onDragStart={(
-																event,
-															) =>
-																startFavoriteDrag(
-																	event,
-																	id,
-																)
-															}
-															onDragEnd={() =>
-																setIsFavoriteDropActive(
-																	false,
-																)
-															}
-															onClick={() =>
-																setActiveTab(id)
-															}
-														>
-															<Icon size={16} />
-															<span>
+														<Tooltip>
+															<TooltipTrigger
+																asChild
+															>
+																<button
+																	draggable
+																	className={`nav-btn ${activeTab === id ? "active" : ""}`}
+																	onDragStart={(
+																		event,
+																	) =>
+																		startFavoriteDrag(
+																			event,
+																			id,
+																		)
+																	}
+																	onDragEnd={() =>
+																		setIsFavoriteDropActive(
+																			false,
+																		)
+																	}
+																	onClick={() =>
+																		setActiveTab(
+																			id,
+																		)
+																	}
+																>
+																	<Icon
+																		size={
+																			16
+																		}
+																	/>
+																	<span>
+																		{
+																			item.label
+																		}
+																	</span>
+																</button>
+															</TooltipTrigger>
+															<TooltipContent side="right">
 																{item.label}
-															</span>
-														</button>
+															</TooltipContent>
+														</Tooltip>
 														<Tooltip>
 															<TooltipTrigger
 																asChild
@@ -477,6 +597,56 @@ function App() {
 							);
 						})}
 					</nav>
+					<div className="sidebar-footer">
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<button
+									className={`nav-btn ${activeTab === "settings" ? "active" : ""}`}
+									onClick={() => setActiveTab("settings")}
+								>
+									<Settings size={16} />
+									<span>Cài đặt hệ thống</span>
+								</button>
+							</TooltipTrigger>
+							<TooltipContent side="right">
+								Cài đặt hệ thống
+							</TooltipContent>
+						</Tooltip>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<button
+									className="nav-btn sidebar-collapse-toggle"
+									onClick={() =>
+										setSidebarCollapsed(
+											(current) => !current,
+										)
+									}
+									aria-label={
+										sidebarCollapsed
+											? "Mở rộng menu"
+											: "Thu gọn menu"
+									}
+								>
+									{sidebarCollapsed ? (
+										<>
+											<PanelLeftOpen size={17} />
+											<span>Thu gọn</span>
+										</>
+									) : (
+										<>
+											<PanelLeftClose size={17} />
+											<span>Thu gọn</span>
+										</>
+									)}
+								</button>
+							</TooltipTrigger>
+							<TooltipContent side="right">
+								{sidebarCollapsed
+									? "Mở rộng menu"
+									: "Thu gọn menu"}
+							</TooltipContent>
+						</Tooltip>
+					</div>
 					{activeTab === "vault" && (
 						<div className="vault-search">
 							<input

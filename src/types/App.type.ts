@@ -29,7 +29,8 @@ export type AppTab =
 	| "portProcessInspector"
 	| "environmentDiff"
 	| "secretScanner"
-	| "hashGenerator";
+	| "hashGenerator"
+	| "settings";
 
 /** A reusable sidebar navigation item. */
 export interface NavigationItem {
