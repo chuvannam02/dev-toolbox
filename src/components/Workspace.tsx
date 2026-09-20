@@ -15,12 +15,7 @@ import {
 import { useEffect, useState } from "react";
 
 import { Button } from "../components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from "../components/ui/card";
+import { Card, CardContent } from "../components/ui/card";
 import { Checkbox } from "../components/ui/checkbox";
 import { Input } from "../components/ui/input";
 import {
@@ -65,7 +60,7 @@ const Workspace: React.FC = (): React.JSX.Element => {
 	const [selectedApps, setSelectedApps] = useState<Set<number>>(new Set());
 	const [newAppName, setNewAppName] = useState("");
 	const [newAppPath, setNewAppPath] = useState("");
-	const [newAppIcon, setNewAppIcon] = useState("folder");
+	const [newAppIcon, setNewAppIcon] = useState<string>("folder");
 
 	useEffect(() => {
 		loadApps();
@@ -176,23 +171,49 @@ const Workspace: React.FC = (): React.JSX.Element => {
 			{/* Form thêm App/Folder */}
 			<Card>
 				<CardContent className="pt-6">
-					<form onSubmit={handleAddApp} className="flex flex-wrap items-end gap-3">
+					<form
+						onSubmit={handleAddApp}
+						className="flex flex-wrap items-end gap-3"
+					>
 						<div className="flex flex-col gap-1.5">
-							<label className="text-xs text-muted-foreground">Icon</label>
-							<Select value={newAppIcon} onValueChange={setNewAppIcon}>
+							<label className="text-xs text-muted-foreground">
+								Icon
+							</label>
+							<Select
+								value={newAppIcon}
+								onValueChange={(value) => {
+									if (value !== null) {
+										setNewAppIcon(value);
+									}
+								}}
+							>
 								<SelectTrigger className="w-[180px]">
 									<SelectValue>
 										<span className="flex items-center gap-2">
-											<AppIcon icon={newAppIcon} className="h-4 w-4" />
-											{ICON_OPTIONS.find((o) => o.value === newAppIcon)?.label}
+											<AppIcon
+												icon={newAppIcon}
+												className="h-4 w-4"
+											/>
+											{
+												ICON_OPTIONS.find(
+													(o) =>
+														o.value === newAppIcon,
+												)?.label
+											}
 										</span>
 									</SelectValue>
 								</SelectTrigger>
 								<SelectContent>
 									{ICON_OPTIONS.map((opt) => (
-										<SelectItem key={opt.value} value={opt.value}>
+										<SelectItem
+											key={opt.value}
+											value={opt.value}
+										>
 											<span className="flex items-center gap-2">
-												<AppIcon icon={opt.value} className="h-4 w-4" />
+												<AppIcon
+													icon={opt.value}
+													className="h-4 w-4"
+												/>
 												{opt.label}
 											</span>
 										</SelectItem>
@@ -202,7 +223,9 @@ const Workspace: React.FC = (): React.JSX.Element => {
 						</div>
 
 						<div className="flex min-w-[180px] flex-1 flex-col gap-1.5">
-							<label className="text-xs text-muted-foreground">Tên</label>
+							<label className="text-xs text-muted-foreground">
+								Tên
+							</label>
 							<Input
 								value={newAppName}
 								onChange={(e) => setNewAppName(e.target.value)}
@@ -212,11 +235,15 @@ const Workspace: React.FC = (): React.JSX.Element => {
 						</div>
 
 						<div className="flex min-w-[280px] flex-[2] flex-col gap-1.5">
-							<label className="text-xs text-muted-foreground">Đường dẫn</label>
+							<label className="text-xs text-muted-foreground">
+								Đường dẫn
+							</label>
 							<div className="flex gap-1.5">
 								<Input
 									value={newAppPath}
-									onChange={(e) => setNewAppPath(e.target.value)}
+									onChange={(e) =>
+										setNewAppPath(e.target.value)
+									}
 									placeholder="vd: D:\projects\spring-boot"
 									required
 									className="min-w-0 flex-1"
@@ -254,7 +281,9 @@ const Workspace: React.FC = (): React.JSX.Element => {
 			{apps.length === 0 ? (
 				<div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-16 text-muted-foreground">
 					<Folder className="h-8 w-8" />
-					<p className="text-sm">Chưa có ứng dụng nào. Thêm một cái ở trên.</p>
+					<p className="text-sm">
+						Chưa có ứng dụng nào. Thêm một cái ở trên.
+					</p>
 				</div>
 			) : (
 				<div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-3">
@@ -271,15 +300,26 @@ const Workspace: React.FC = (): React.JSX.Element => {
 						>
 							<CardContent className="flex items-center gap-3 px-4">
 								<Checkbox
-									checked={app.id ? selectedApps.has(app.id) : false}
-									onCheckedChange={() => app.id && toggleSelect(app.id)}
+									checked={
+										app.id
+											? selectedApps.has(app.id)
+											: false
+									}
+									onCheckedChange={() =>
+										app.id && toggleSelect(app.id)
+									}
 									onClick={(e) => e.stopPropagation()}
 								/>
 								<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
-									<AppIcon icon={app.icon} className="h-4.5 w-4.5" />
+									<AppIcon
+										icon={app.icon}
+										className="h-4.5 w-4.5"
+									/>
 								</div>
 								<div className="min-w-0">
-									<div className="truncate font-medium">{app.name}</div>
+									<div className="truncate font-medium">
+										{app.name}
+									</div>
 									<div className="truncate text-xs text-muted-foreground">
 										{app.path}
 									</div>

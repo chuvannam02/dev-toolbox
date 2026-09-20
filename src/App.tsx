@@ -177,6 +177,7 @@ const TAB_COMPONENTS = {
 	hashGenerator: HashGenerator,
 	settings: SystemSettings,
 } as const;
+
 const NAVIGATION_ICONS: Record<AppTab, ComponentType<{ size?: number }>> = {
 	docker: Boxes,
 	workspace: FolderKanban,

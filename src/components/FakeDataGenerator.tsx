@@ -109,36 +109,6 @@ function optionsForDb(db: DbType): {
 	return { dbGroup: SQL_TYPE_OPTIONS[db], semanticGroup: SEMANTIC_OPTIONS };
 }
 
-// ---------- Tự động gợi ý "kind" theo tên cột ----------
-// Trả về null nếu không nhận diện được -> giữ nguyên lựa chọn hiện tại.
-function suggestKindFromName(rawName: string): string | null {
-	const name = rawName.trim().toLowerCase();
-	if (!name) return null;
-
-	const rules: [RegExp, string][] = [
-		[/^id$|_id$|^ma_|^ma$/, "sequence"],
-		[/uuid/, "uuid"],
-		[/email/, "email"],
-		[/(phone|sdt|dien_thoai|so_dien_thoai)/, "phone"],
-		[/(age|tuoi)/, "age"],
-		[/(price|amount|gia|tien|salary|luong)/, "price"],
-		[/(address|dia_chi)/, "full_address"],
-		[/(city|thanh_pho|tinh)/, "city"],
-		[/(country|quoc_gia)/, "country"],
-		[/(full_name|fullname|ho_ten|^name$|ten_)/, "name"],
-		[/username|user_name/, "username"],
-		[/(created_at|updated_at|_at$|datetime|thoi_gian)/, "datetime"],
-		[/(date|ngay)/, "date"],
-		[/(is_|active|enabled|^bool)/, "boolean"],
-		[/(description|note|content|mo_ta|ghi_chu)/, "text"],
-	];
-
-	for (const [pattern, kind] of rules) {
-		if (pattern.test(name)) return kind;
-	}
-	return null;
-}
-
 // ---------- Preset dựng sẵn ----------
 
 type Preset = { label: string; columns: { name: string; kind: string }[] };

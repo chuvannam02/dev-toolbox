@@ -1020,7 +1020,14 @@ const DockerLogs: React.FC = (): React.JSX.Element => {
 							</SelectContent>
 						</Select>
 
-						<Select value={tailCount} onValueChange={setTailCount}>
+						<Select
+							value={tailCount}
+							onValueChange={(value) => {
+								if (value !== null) {
+									setTailCount(value);
+								}
+							}}
+						>
 							<SelectTrigger className="w-[120px]">
 								<SelectValue />
 							</SelectTrigger>
