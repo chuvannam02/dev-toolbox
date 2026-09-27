@@ -996,7 +996,9 @@ const DockerLogs: React.FC = (): React.JSX.Element => {
 						<Select
 							value={selectedContainer}
 							onValueChange={(value) => {
-								setSelectedContainer(value);
+								if (value) {
+									setSelectedContainer(value);
+								}
 
 								setIsRealtime(false);
 							}}
@@ -1034,11 +1036,8 @@ const DockerLogs: React.FC = (): React.JSX.Element => {
 
 							<SelectContent>
 								<SelectItem value="50">50 lines</SelectItem>
-
 								<SelectItem value="200">200 lines</SelectItem>
-
 								<SelectItem value="500">500 lines</SelectItem>
-
 								<SelectItem value="all">All</SelectItem>
 							</SelectContent>
 						</Select>

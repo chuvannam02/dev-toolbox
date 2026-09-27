@@ -30,6 +30,7 @@ import {
 	Star,
 	WandSparkles,
 	Settings,
+	CalendarDays,
 	PanelLeftClose,
 	PanelLeftOpen,
 } from "lucide-react";
@@ -97,6 +98,7 @@ const NAVIGATION_GROUPS = [
 		label: "Quick Tools",
 		tabs: ["cheatsheet", "timeConverter", "writer"],
 	},
+	{ id: "productivity", label: "Productivity", tabs: ["jiraWorklog"] },
 ] as const satisfies ReadonlyArray<{
 	id: string;
 	label: string;
@@ -109,7 +111,9 @@ const SIDEBAR_COLLAPSED_STORAGE_KEY = "dev-toolbox:sidebar-collapsed";
 
 const BilingualWriter = lazy(() => import("./components/BilingualWriter"));
 const JenkinsController = lazy(() => import("./components/JenkinsController"));
-const SmartFormatter = lazy(() => import("./components/SmartFormatter"));
+const SmartFormatter = lazy(
+	() => import("./components/features/smart-formatter/SmartFormatter"),
+);
 const CompareFiles = lazy(() => import("./components/CompareFiles"));
 const JsonToExcel = lazy(() => import("./components/JsonToExcel"));
 const Cheatsheet = lazy(() => import("./components/Cheatsheet"));
@@ -125,7 +129,7 @@ const ApiClient = lazy(() => import("./components/tools/ApiClient"));
 const WebSocketSse = lazy(() => import("./components/tools/WebSocketSse"));
 const JwtInspector = lazy(() => import("./components/tools/JwtInspector"));
 const Kubernetes = lazy(() => import("./components/tools/Kubernetes"));
-const NetworkToolbox = lazy(() => import("./components/tools/NetworkToolbox"));
+const NetworkToolbox = lazy(() => import("./components/tools/network/NetworkToolbox"));
 const CronBuilder = lazy(() => import("./components/tools/CronBuilder"));
 const TlsChecker = lazy(() => import("./components/tools/TlsChecker"));
 const Database = lazy(() => import("./components/tools/Database"));
@@ -144,6 +148,7 @@ const EnvironmentDiff = lazy(
 const SecretScanner = lazy(() => import("./components/tools/SecretScanner"));
 const HashGenerator = lazy(() => import("./components/tools/HashGenerator"));
 const SystemSettings = lazy(() => import("./components/SystemSettings"));
+const JiraWorklog = lazy(() => import("./components/JiraWorklog"));
 
 const TAB_COMPONENTS = {
 	docker: DockerLogs,
@@ -175,6 +180,7 @@ const TAB_COMPONENTS = {
 	environmentDiff: EnvironmentDiff,
 	secretScanner: SecretScanner,
 	hashGenerator: HashGenerator,
+	jiraWorklog: JiraWorklog,
 	settings: SystemSettings,
 } as const;
 
@@ -209,6 +215,7 @@ const NAVIGATION_ICONS: Record<AppTab, ComponentType<{ size?: number }>> = {
 	environmentDiff: FileDiff,
 	secretScanner: KeyRound,
 	hashGenerator: Braces,
+	jiraWorklog: CalendarDays,
 	settings: Settings,
 };
 

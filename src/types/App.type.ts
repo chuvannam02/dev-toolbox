@@ -30,6 +30,7 @@ export type AppTab =
 	| "environmentDiff"
 	| "secretScanner"
 	| "hashGenerator"
+	| "jiraWorklog"
 	| "settings";
 
 /** A reusable sidebar navigation item. */

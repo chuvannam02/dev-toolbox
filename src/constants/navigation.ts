@@ -31,5 +31,6 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
 	{ id: "environmentDiff", label: "Environment Diff" },
 	{ id: "secretScanner", label: "Secret Scanner" },
 	{ id: "hashGenerator", label: "Hash Generator" },
+	{ id: "jiraWorklog", label: "Jira Worklog" },
 	{ id: "settings", label: "Cài đặt hệ thống" },
 ];

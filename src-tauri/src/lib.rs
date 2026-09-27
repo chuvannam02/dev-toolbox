@@ -16,6 +16,10 @@ mod database;
 mod notebook;
 mod docker_logs;
 mod commands;
+mod jira;
+mod compare;
+mod formatter;
+mod network;
 
 use docker_logs::{
     get_docker_containers,
@@ -277,8 +281,8 @@ fn execute_ansible(command: String) -> Result<String, String> {
 // Nhớ đăng ký các hàm mới vào invoke_handler trong hàm run()
 // .invoke_handler(tauri::generate_handler![..., get_launcher_apps, add_launcher_app, launch_items, execute_ansible])
 
-struct AppState {
-    db: Mutex<Connection>,
+pub(crate) struct AppState {
+    pub(crate) db: Mutex<Connection>,
 }
 
 const AUTOSTART_REGISTRY_KEY: &str = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
@@ -359,117 +363,6 @@ pub struct FormatResult {
     error_msg: Option<String>,
 }
 
-/// Split a shell-style curl command without executing it. This intentionally supports the
-/// quoting normally produced by Postman/Insomnia (`'...'` and `"..."`) and line continuations.
-fn tokenize_curl_command(input: &str) -> Result<Vec<String>, String> {
-    let normalized = input
-        .lines()
-        .map(|line| {
-            let trimmed = line.trim_end();
-            trimmed
-                .strip_suffix('\\')
-                .or_else(|| trimmed.strip_suffix('^'))
-                .unwrap_or(trimmed)
-        })
-        .collect::<Vec<_>>()
-        .join(" ");
-
-    let mut tokens = Vec::new();
-    let mut current = String::new();
-    let mut quote: Option<char> = None;
-    let mut chars = normalized.chars().peekable();
-
-    while let Some(ch) = chars.next() {
-        if let Some(active_quote) = quote {
-            if ch == active_quote {
-                quote = None;
-            } else if ch == '\\' && active_quote == '"' && matches!(chars.peek(), Some('"' | '\\'))
-            {
-                // Keep escaped JSON quotes/backslashes as literal characters.
-                current.push(chars.next().expect("peeked character must exist"));
-            } else {
-                current.push(ch);
-            }
-        } else {
-            match ch {
-                '\'' | '"' => quote = Some(ch),
-                ch if ch.is_whitespace() => {
-                    if !current.is_empty() {
-                        tokens.push(std::mem::take(&mut current));
-                    }
-                }
-                _ => current.push(ch),
-            }
-        }
-    }
-
-    if quote.is_some() {
-        return Err("Lệnh cURL có dấu nháy chưa được đóng.".into());
-    }
-    if !current.is_empty() {
-        tokens.push(current);
-    }
-    Ok(tokens)
-}
-
-fn quote_for_windows_cmd(argument: &str) -> String {
-    if argument.is_empty() {
-        return "\"\"".into();
-    }
-
-    // CMD accepts quoted arguments; `\\"` makes an embedded quote reach curl literally,
-    // which is required for JSON supplied through --data/--data-raw.
-    if argument
-        .chars()
-        .any(|ch| ch.is_whitespace() || "\"&|<>()^".contains(ch))
-    {
-        format!("\"{}\"", argument.replace('"', "\\\""))
-    } else {
-        argument.into()
-    }
-}
-
-fn format_curl_for_windows_cmd(input: &str) -> Result<String, String> {
-    let mut tokens = tokenize_curl_command(input)?;
-    let executable = tokens.first().map(|token| token.to_ascii_lowercase());
-    if !matches!(executable.as_deref(), Some("curl") | Some("curl.exe")) {
-        return Err("Không phải lệnh cURL.".into());
-    }
-
-    // Explicit .exe avoids the Invoke-WebRequest alias in Windows PowerShell and also works in CMD.
-    tokens[0] = "curl.exe".into();
-    let lines = tokens
-        .into_iter()
-        .map(|token| quote_for_windows_cmd(&token))
-        .collect::<Vec<_>>();
-
-    // One physical line lets users paste directly into CMD without the `More?` prompt.
-    Ok(lines.join(" "))
-}
-
-#[cfg(test)]
-mod formatter_tests {
-    use super::format_curl_for_windows_cmd;
-
-    #[test]
-    fn converts_bash_curl_json_to_windows_cmd() {
-        let formatted = format_curl_for_windows_cmd(
-            "curl -X POST -H 'Content-Type: application/json' -d '{\"name\":\"Lan\"}' https://api.example.com/users",
-        )
-        .expect("valid curl command");
-
-        assert!(formatted.starts_with("curl.exe -X POST"));
-        assert!(!formatted.contains('\n'));
-        assert!(formatted.contains("\"Content-Type: application/json\""));
-        assert!(formatted.contains("{\\\"name\\\":\\\"Lan\\\"}"));
-    }
-
-    #[test]
-    fn rejects_an_unclosed_quote() {
-        assert!(format_curl_for_windows_cmd("curl -H 'Authorization: Bearer token").is_err());
-    }
-}
-
 // 1. CẬP NHẬT HÀM init_db (Thêm bảng launcher)
 fn init_db(db_path: std::path::PathBuf) -> rusqlite::Result<rusqlite::Connection> {
     let conn = rusqlite::Connection::open(db_path)?;
@@ -477,6 +370,7 @@ fn init_db(db_path: std::path::PathBuf) -> rusqlite::Result<rusqlite::Connection
     conn.execute("CREATE TABLE IF NOT EXISTS credentials (id INTEGER PRIMARY KEY, name TEXT NOT NULL, username TEXT NOT NULL)", [])?;
     // Bảng Launcher (Mới)
     conn.execute("CREATE TABLE IF NOT EXISTS launcher_apps (id INTEGER PRIMARY KEY, name TEXT, path TEXT, icon TEXT)", [])?;
+    conn.execute("CREATE TABLE IF NOT EXISTS jira_settings (id INTEGER PRIMARY KEY CHECK (id = 1), config TEXT NOT NULL)", [])?;
     Ok(conn)
 }
 
@@ -523,111 +417,6 @@ fn get_credentials(state: tauri::State<AppState>) -> Result<Vec<Credential>, Str
         }
     }
     Ok(result)
-}
-
-// --- COMMANDS MỚI CHO PHASE 2: FORMAT CODE ---
-#[tauri::command]
-fn detect_and_format(raw_text: String) -> FormatResult {
-    let text_trim = raw_text.trim();
-    if text_trim.is_empty() {
-        return FormatResult {
-            format_type: "unknown".into(),
-            is_valid: false,
-            formatted_text: "".into(),
-            error_msg: None,
-        };
-    }
-
-    // 0. Convert common Bash/Postman cURL exports into a command that CMD can paste and run.
-    if matches!(
-        text_trim
-            .split_whitespace()
-            .next()
-            .map(|part| part.to_ascii_lowercase())
-            .as_deref(),
-        Some("curl") | Some("curl.exe")
-    ) {
-        return match format_curl_for_windows_cmd(text_trim) {
-            Ok(formatted) => FormatResult {
-                format_type: "curl".into(),
-                is_valid: true,
-                formatted_text: formatted,
-                error_msg: None,
-            },
-            Err(error) => FormatResult {
-                format_type: "curl".into(),
-                is_valid: false,
-                formatted_text: raw_text,
-                error_msg: Some(error),
-            },
-        };
-    }
-
-    // 1. Thử parse JSON
-    if text_trim.starts_with('{') || text_trim.starts_with('[') {
-        match serde_json::from_str::<serde_json::Value>(text_trim) {
-            Ok(parsed) => {
-                return FormatResult {
-                    format_type: "json".into(),
-                    is_valid: true,
-                    formatted_text: serde_json::to_string_pretty(&parsed).unwrap(),
-                    error_msg: None,
-                }
-            }
-            Err(e) => {
-                return FormatResult {
-                    format_type: "json".into(),
-                    is_valid: false,
-                    formatted_text: raw_text,
-                    error_msg: Some(format!("Lỗi cú pháp JSON: {}", e)),
-                }
-            }
-        }
-    }
-
-    // 2. Thử parse XML
-    if text_trim.starts_with('<') {
-        let mut reader = quick_xml::Reader::from_str(text_trim);
-        if reader.read_event().is_ok() {
-            return FormatResult {
-                format_type: "xml".into(),
-                is_valid: true,
-                formatted_text: raw_text, // Rust format XML hơi phức tạp, ta nhường việc highlight cho Monaco
-                error_msg: None,
-            };
-        }
-    }
-
-    // 3. Thử format SQL (nếu chứa các keyword SQL cơ bản)
-    let upper = text_trim.to_uppercase();
-    if upper.starts_with("SELECT")
-        || upper.starts_with("INSERT")
-        || upper.starts_with("UPDATE")
-        || upper.starts_with("DELETE")
-        || upper.starts_with("CREATE")
-    {
-        let formatted = sqlformat::format(
-            text_trim,
-            &sqlformat::QueryParams::None,
-            &sqlformat::FormatOptions::default(),
-        );
-        return FormatResult {
-            format_type: "sql".into(),
-            is_valid: true,
-            formatted_text: formatted,
-            error_msg: None,
-        };
-    }
-
-    // Fallback
-    FormatResult {
-        format_type: "unknown".into(),
-        is_valid: true,
-        formatted_text: raw_text,
-        error_msg: Some(
-            "Không nhận dạng được định dạng đặc biệt, hiển thị như văn bản thường.".into(),
-        ),
-    }
 }
 
 #[tauri::command]
@@ -691,7 +480,7 @@ pub fn run() {
             let db_path = app_data_dir.join("toolbox.db");
             println!("Đang lưu Database tại: {:?}", db_path); // Mở console sẽ thấy đường dẫn này
 
-            let db = init_db(db_path).expect("Khởi tạo SQLite thất bại!");
+            let db = init_db(db_path.clone()).expect("Khởi tạo SQLite thất bại!");
             app.manage(AppState { db: Mutex::new(db) });
             Ok(())
         })
@@ -699,7 +488,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             save_credential,
             get_credentials,
-            detect_and_format,
+            formatter::detect_and_format,
             json_to_excel,
             csv_to_excel,
             get_launcher_apps,
@@ -712,6 +501,11 @@ pub fn run() {
             check_grammar,
             analyze_build_log,
             trigger_jenkins_job,
+			network::network_ping,
+            network::network_tcp_check,
+            network::network_dns_resolve,
+            network::network_nslookup,
+            network::network_trace,
             notebook::ensure_kernel_started,
             fake_data::generate_fake_data,
             fake_data::generate_fake_data_from_schema,
@@ -721,6 +515,14 @@ pub fn run() {
             notebook::execute_cell,
             notebook::restart_kernel,
             commands::cron::preview_cron,
+            jira::get_jira_settings,
+            jira::save_jira_settings,
+            jira::test_jira_connection,
+            jira::get_jira_issues,
+            jira::get_jira_worklogs,
+            jira::check_jira_worklog_today,
+			compare::save_compare_history,
+			compare::search_compare_history,
             get_launch_at_login,
             set_launch_at_login,
             clear_app_cache,
