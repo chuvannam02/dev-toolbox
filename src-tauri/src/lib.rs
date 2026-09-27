@@ -12,6 +12,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio::time::sleep;
 
 mod fake_data;
+mod jwt;
 mod database;
 mod notebook;
 mod docker_logs;
@@ -523,6 +524,7 @@ pub fn run() {
             jira::check_jira_worklog_today,
 			compare::save_compare_history,
 			compare::search_compare_history,
+			jwt::verify_jwt_hmac,
             get_launch_at_login,
             set_launch_at_login,
             clear_app_cache,

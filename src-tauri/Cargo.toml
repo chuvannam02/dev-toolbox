@@ -57,7 +57,7 @@ sqlx = {
         "mysql"
     ]
 }
-
+jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 urlencoding = "2"
 ssh2 = "0.9"
 cron = "0.17"
@@ -74,3 +74,4 @@ strip = true
 lto = "thin"
 codegen-units = 1
 panic = "abort"
+
