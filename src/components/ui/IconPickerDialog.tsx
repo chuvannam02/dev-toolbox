@@ -1,15 +1,11 @@
 import {
-	lazy,
-	Suspense,
 	useEffect,
 	useMemo,
 	useRef,
 	useState,
-	type LazyExoticComponent,
 	type ComponentType,
 } from "react";
-import dynamicIconImports from "lucide-react/dynamicIconImports";
-import { Search, X } from "lucide-react";
+import { BookOpen, Box, Braces, Bug, Cloud, Code, Database, FileCode2, Folder, GitBranch, Key, Layers3, Network, Rocket, Search, Server, Shield, Terminal, Wrench, X } from "lucide-react";
 import { Button } from "./button";
 import {
 	Dialog,
@@ -21,25 +17,11 @@ import {
 import { Input } from "./input";
 import "./IconPickerDialog.css";
 
-// The full, up-to-date list of every icon lucide-react ships.
-export type IconName = keyof typeof dynamicIconImports;
-export const ALL_ICON_NAMES = Object.keys(
-	dynamicIconImports,
-) as IconName[];
-
-// --- Lazy loading -----------------------------------------------------
-// Each icon is code-split individually via lucide-react's own
-// dynamicIconImports map, and only actually import()-ed the first time
-// it needs to render (i.e. the first time it scrolls into view).
-const lazyIconCache = new Map<IconName, LazyExoticComponent<ComponentType<any>>>();
-function getLazyIcon(name: IconName) {
-	let Comp = lazyIconCache.get(name);
-	if (!Comp) {
-		Comp = lazy(dynamicIconImports[name]);
-		lazyIconCache.set(name, Comp);
-	}
-	return Comp;
-}
+// A curated icon catalogue avoids importing Lucide's dynamic map, which
+// otherwise creates several thousand Vite chunks and makes dev startup slow.
+const ICONS = { "book-open": BookOpen, box: Box, braces: Braces, bug: Bug, cloud: Cloud, code: Code, "code-2": Code, "command-code": Code, database: Database, docker: Box, "docker-prune": Box, "docker-ps": Box, "file-code": FileCode2, folder: Folder, "git-branch": GitBranch, key: Key, "layers-3": Layers3, network: Network, profile: FileCode2, profiles: FileCode2, rocket: Rocket, server: Server, shield: Shield, terminal: Terminal, wrench: Wrench } satisfies Record<string, ComponentType<any>>;
+export type IconName = keyof typeof ICONS;
+export const ALL_ICON_NAMES = Object.keys(ICONS) as IconName[];
 
 export const AppIcon = ({
 	name,
@@ -50,12 +32,8 @@ export const AppIcon = ({
 	size?: number;
 	className?: string;
 }) => {
-	const Comp = getLazyIcon(name);
-	return (
-		<Suspense fallback={<span className="icon-fallback" style={{ width: size, height: size }} />}>
-			<Comp size={size} className={className} />
-		</Suspense>
-	);
+	const Comp = ICONS[name] ?? Folder;
+	return <Comp size={size} className={className} />;
 };
 
 // --- Debounce hook ------------------------------------------------------
