@@ -11,22 +11,19 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::time::sleep;
 
-mod fake_data;
-mod jwt;
-mod database;
-mod notebook;
-mod docker_logs;
 mod commands;
-mod jira;
 mod compare;
+mod database;
+mod docker_logs;
+mod fake_data;
 mod formatter;
+mod jira;
+mod jwt;
 mod network;
+mod nginx;
+mod notebook;
 
-use docker_logs::{
-    get_docker_containers,
-    get_docker_logs,
-    install_ssh_key,
-};
+use docker_logs::{get_docker_containers, get_docker_logs, install_ssh_key};
 
 #[tauri::command]
 async fn trigger_jenkins_job(
@@ -314,7 +311,17 @@ fn set_launch_at_login(enabled: bool) -> Result<(), String> {
                 .map_err(|error| format!("Không xác định được file ứng dụng: {error}"))?;
             let command = format!("\"{}\"", executable.display());
             let output = Command::new("reg")
-                .args(["add", AUTOSTART_REGISTRY_KEY, "/v", AUTOSTART_VALUE_NAME, "/t", "REG_SZ", "/d", &command, "/f"])
+                .args([
+                    "add",
+                    AUTOSTART_REGISTRY_KEY,
+                    "/v",
+                    AUTOSTART_VALUE_NAME,
+                    "/t",
+                    "REG_SZ",
+                    "/d",
+                    &command,
+                    "/f",
+                ])
                 .output()
                 .map_err(|error| format!("Không thể bật khởi động cùng hệ thống: {error}"))?;
             if !output.status.success() {
@@ -322,10 +329,18 @@ fn set_launch_at_login(enabled: bool) -> Result<(), String> {
             }
         } else {
             let output = Command::new("reg")
-                .args(["delete", AUTOSTART_REGISTRY_KEY, "/v", AUTOSTART_VALUE_NAME, "/f"])
+                .args([
+                    "delete",
+                    AUTOSTART_REGISTRY_KEY,
+                    "/v",
+                    AUTOSTART_VALUE_NAME,
+                    "/f",
+                ])
                 .output()
                 .map_err(|error| format!("Không thể tắt khởi động cùng hệ thống: {error}"))?;
-            if !output.status.success() && !String::from_utf8_lossy(&output.stderr).contains("unable to find") {
+            if !output.status.success()
+                && !String::from_utf8_lossy(&output.stderr).contains("unable to find")
+            {
                 return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
             }
         }
@@ -340,11 +355,16 @@ fn set_launch_at_login(enabled: bool) -> Result<(), String> {
 
 #[tauri::command]
 fn clear_app_cache(app: AppHandle) -> Result<(), String> {
-    let cache_dir = app.path().app_cache_dir().map_err(|error| error.to_string())?;
+    let cache_dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|error| error.to_string())?;
     if cache_dir.exists() {
-        std::fs::remove_dir_all(&cache_dir).map_err(|error| format!("Không thể xóa cache: {error}"))?;
+        std::fs::remove_dir_all(&cache_dir)
+            .map_err(|error| format!("Không thể xóa cache: {error}"))?;
     }
-    std::fs::create_dir_all(&cache_dir).map_err(|error| format!("Không thể tạo lại cache: {error}"))?;
+    std::fs::create_dir_all(&cache_dir)
+        .map_err(|error| format!("Không thể tạo lại cache: {error}"))?;
     Ok(())
 }
 
@@ -502,7 +522,7 @@ pub fn run() {
             check_grammar,
             analyze_build_log,
             trigger_jenkins_job,
-			network::network_ping,
+            network::network_ping,
             network::network_tcp_check,
             network::network_dns_resolve,
             network::network_nslookup,
@@ -521,10 +541,17 @@ pub fn run() {
             jira::test_jira_connection,
             jira::get_jira_issues,
             jira::get_jira_worklogs,
+            nginx::commands::nginx_parse,
+            nginx::commands::nginx_parse_file,
+            nginx::commands::nginx_native_test,
+            nginx::commands::nginx_native_dump,
+            nginx::commands::nginx_bundled_test,
+            nginx::commands::nginx_bundled_dump,
+            nginx::commands::nginx_ensure_bundled,
             jira::check_jira_worklog_today,
-			compare::save_compare_history,
-			compare::search_compare_history,
-			jwt::verify_jwt_hmac,
+            compare::save_compare_history,
+            compare::search_compare_history,
+            jwt::verify_jwt_hmac,
             get_launch_at_login,
             set_launch_at_login,
             clear_app_cache,

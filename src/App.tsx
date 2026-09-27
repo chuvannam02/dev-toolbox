@@ -96,7 +96,7 @@ const NAVIGATION_GROUPS = [
 	{
 		id: "quick-tools",
 		label: "Quick Tools",
-		tabs: ["cheatsheet", "timeConverter", "writer"],
+		tabs: ["cheatsheet", "timeConverter", "writer", "nginx"],
 	},
 	{ id: "productivity", label: "Productivity", tabs: ["jiraWorklog"] },
 ] as const satisfies ReadonlyArray<{
@@ -150,6 +150,8 @@ const HashGenerator = lazy(() => import("./components/tools/HashGenerator"));
 const SystemSettings = lazy(() => import("./components/SystemSettings"));
 const JiraWorklog = lazy(() => import("./components/JiraWorklog"));
 
+const NginxStudio = lazy(() => import("./components/features/nginx/NginxStudioPage"))
+
 const TAB_COMPONENTS = {
 	docker: DockerLogs,
 	workspace: Workspace,
@@ -182,6 +184,7 @@ const TAB_COMPONENTS = {
 	hashGenerator: HashGenerator,
 	jiraWorklog: JiraWorklog,
 	settings: SystemSettings,
+	nginx: NginxStudio,
 } as const;
 
 const NAVIGATION_ICONS: Record<AppTab, ComponentType<{ size?: number }>> = {
@@ -217,6 +220,7 @@ const NAVIGATION_ICONS: Record<AppTab, ComponentType<{ size?: number }>> = {
 	hashGenerator: Braces,
 	jiraWorklog: CalendarDays,
 	settings: Settings,
+	nginx: Braces,
 };
 
 function App() {

@@ -33,4 +33,5 @@ export const NAVIGATION_ITEMS: NavigationItem[] = [
 	{ id: "hashGenerator", label: "Hash Generator" },
 	{ id: "jiraWorklog", label: "Jira Worklog" },
 	{ id: "settings", label: "Cài đặt hệ thống" },
+	{ id: "nginx", label: "Nginx Studio"}
 ];

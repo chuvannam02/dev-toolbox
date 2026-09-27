@@ -31,7 +31,8 @@ export type AppTab =
 	| "secretScanner"
 	| "hashGenerator"
 	| "jiraWorklog"
-	| "settings";
+	| "settings"
+	| "nginx";
 
 /** A reusable sidebar navigation item. */
 export interface NavigationItem {
