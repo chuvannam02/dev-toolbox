@@ -411,6 +411,40 @@ const DockerLogs: React.FC = (): React.JSX.Element => {
 		}
 	}
 
+	async function invokeWithSudoFallback<T>(
+		command: string,
+		args: Record<string, unknown>,
+	): Promise<T> {
+		try {
+			return await invoke<T>(command, { ...args, ssh: getSshConfig() });
+		} catch (error) {
+			if (String(error) === "SUDO_REQUIRED" && !useSudo) {
+				const pwd = window.prompt(
+					"Server yêu cầu quyền sudo để chạy Docker.\nNhập sudo password:",
+				);
+
+				if (!pwd) {
+					throw new Error(
+						"Docker yêu cầu quyền sudo nhưng chưa nhập password.",
+					);
+				}
+
+				setUseSudo(true);
+				setSudoPassword(pwd);
+
+				const sudoSsh: SshConfig = {
+					...getSshConfig(),
+					useSudo: true,
+					sudoPassword: pwd,
+				};
+
+				return await invoke<T>(command, { ...args, ssh: sudoSsh });
+			}
+
+			throw error;
+		}
+	}
+
 	/*
 	 * =========================================================
 	 * DOCKER
@@ -463,7 +497,7 @@ const DockerLogs: React.FC = (): React.JSX.Element => {
 					: "🔄 Reading local Docker containers...",
 			);
 
-			const data = await invoke<DockerContainer[]>(
+			const data = await invokeWithSudoFallback<DockerContainer[]>(
 				"get_docker_containers",
 				{
 					ssh: getSshConfig(),
@@ -494,7 +528,7 @@ const DockerLogs: React.FC = (): React.JSX.Element => {
 		try {
 			setLoadingLogs(true);
 
-			const logs = await invoke<string>("get_docker_logs", {
+			const logs = await invokeWithSudoFallback<string>("get_docker_logs", {
 				containerId,
 				tail: tailCount,
 				grep: grepTerm,

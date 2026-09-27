@@ -57,8 +57,7 @@ fn connect_ssh(config: &SshConfig) -> Result<Session, String> {
     let tcp = TcpStream::connect(&address)
         .map_err(|e| format!("Không thể kết nối tới {}: {}", address, e))?;
 
-    let mut session =
-        Session::new().map_err(|e| format!("Không thể tạo SSH session: {}", e))?;
+    let mut session = Session::new().map_err(|e| format!("Không thể tạo SSH session: {}", e))?;
 
     session.set_tcp_stream(tcp);
 
@@ -68,10 +67,7 @@ fn connect_ssh(config: &SshConfig) -> Result<Session, String> {
 
     match config.auth_type.as_str() {
         "password" => {
-            let password = config
-                .password
-                .as_deref()
-                .ok_or("Thiếu SSH password")?;
+            let password = config.password.as_deref().ok_or("Thiếu SSH password")?;
 
             session
                 .userauth_password(&config.user, password)
@@ -85,20 +81,12 @@ fn connect_ssh(config: &SshConfig) -> Result<Session, String> {
                 .ok_or("Thiếu đường dẫn SSH private key")?;
 
             session
-                .userauth_pubkey_file(
-                    &config.user,
-                    None,
-                    Path::new(key_path),
-                    None,
-                )
+                .userauth_pubkey_file(&config.user, None, Path::new(key_path), None)
                 .map_err(|e| format!("SSH key authentication failed: {}", e))?;
         }
 
         _ => {
-            return Err(format!(
-                "SSH auth type không hợp lệ: {}",
-                config.auth_type
-            ));
+            return Err(format!("SSH auth type không hợp lệ: {}", config.auth_type));
         }
     }
 
@@ -176,9 +164,7 @@ fn docker_command(config: &SshConfig, docker_args: &str) -> String {
 }
 
 #[tauri::command]
-pub async fn get_docker_containers(
-    ssh: SshConfig,
-) -> Result<Vec<DockerContainer>, String> {
+pub async fn get_docker_containers(ssh: SshConfig) -> Result<Vec<DockerContainer>, String> {
     tokio::task::spawn_blocking(move || {
         let output = if ssh.enabled {
             let session = connect_ssh(&ssh)?;
@@ -188,26 +174,27 @@ pub async fn get_docker_containers(
                 r#"ps -a --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Image}}""#,
             );
 
-            run_remote_command(
-                &session,
-                &command,
-                ssh.sudo_password.as_deref(),
-            )?
+            match run_remote_command(&session, &command, ssh.sudo_password.as_deref()) {
+                Ok(out) => out,
+                Err(err) => {
+                    if !ssh.use_sudo && looks_like_permission_denied(&err) {
+                        return Err("SUDO_REQUIRED".to_string());
+                    }
+                    return Err(err);
+                }
+            }
         } else {
             let output = Command::new("docker")
-                .args([
-                    "ps",
-                    "-a",
-                    "--format",
-                    "{{.ID}}|{{.Names}}|{{.Status}}|{{.Image}}",
-                ])
+                .args(["ps", "-a", "--format", "{{.ID}}|{{.Names}}|{{.Status}}|{{.Image}}"])
                 .output()
                 .map_err(|e| format!("Không chạy được Docker CLI: {}", e))?;
 
             if !output.status.success() {
-                return Err(
-                    String::from_utf8_lossy(&output.stderr).to_string()
-                );
+                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                if looks_like_permission_denied(&stderr) {
+                    return Err("SUDO_REQUIRED".to_string());
+                }
+                return Err(stderr);
             }
 
             String::from_utf8_lossy(&output.stdout).to_string()
@@ -217,11 +204,7 @@ pub async fn get_docker_containers(
             .lines()
             .filter_map(|line| {
                 let parts: Vec<&str> = line.split('|').collect();
-
-                if parts.len() != 4 {
-                    return None;
-                }
-
+                if parts.len() != 4 { return None; }
                 Some(DockerContainer {
                     id: parts[0].to_string(),
                     name: parts[1].to_string(),
@@ -270,11 +253,7 @@ pub async fn get_docker_logs(
 
             let command = docker_command(&ssh, &docker_args);
 
-            run_remote_command(
-                &session,
-                &command,
-                ssh.sudo_password.as_deref(),
-            )?
+            run_remote_command(&session, &command, ssh.sudo_password.as_deref())?
         } else {
             let mut command = Command::new("docker");
 
@@ -318,6 +297,11 @@ pub async fn get_docker_logs(
     .map_err(|e| e.to_string())?
 }
 
+fn looks_like_permission_denied(output: &str) -> bool {
+    let lower = output.to_lowercase();
+    lower.contains("permission denied") || lower.contains("dial unix")
+}
+
 fn sanitize_name(input: &str) -> String {
     input
         .chars()
@@ -343,34 +327,43 @@ fn get_server_key_path(
         .map_err(|e| e.to_string())?
         .join("ssh");
 
-    fs::create_dir_all(&base)
-        .map_err(|e| format!("Không tạo được thư mục SSH: {}", e))?;
+    fs::create_dir_all(&base).map_err(|e| format!("Không tạo được thư mục SSH: {}", e))?;
 
-    let server_name = sanitize_name(
-        &format!("{}_{}_{}", user, host, port)
-    );
+    let server_name = sanitize_name(&format!("{}_{}_{}", user, host, port));
 
     let server_dir = base.join(server_name);
 
-    fs::create_dir_all(&server_dir)
-        .map_err(|e| format!("Không tạo được server key dir: {}", e))?;
+    fs::create_dir_all(&server_dir).map_err(|e| format!("Không tạo được server key dir: {}", e))?;
 
     Ok(server_dir.join("id_ed25519"))
+}
+fn is_pem_rsa_key(key_path: &Path) -> bool {
+    fs::read_to_string(key_path)
+        .map(|content| content.trim_start().starts_with("-----BEGIN RSA PRIVATE KEY-----"))
+        .unwrap_or(false)
 }
 
 fn ensure_local_key(key_path: &Path) -> Result<(), String> {
     if key_path.exists() {
-        return Ok(());
+        if is_pem_rsa_key(key_path) {
+            return Ok(());
+        }
+
+        /*
+         * Key cũ sai định dạng (OpenSSH format thay vì PEM) —
+         * xoá để tạo lại cho đúng.
+         */
+        let _ = fs::remove_file(key_path);
+        let _ = fs::remove_file(format!("{}.pub", key_path.display()));
     }
 
     let status = Command::new("ssh-keygen")
         .args([
-            "-t",
-            "ed25519",
-            "-N",
-            "",
-            "-C",
-            "tauri-docker-console",
+            "-t", "rsa",
+            "-b", "4096",
+            "-m", "PEM",
+            "-N", "",
+            "-C", "tauri-docker-console",
             "-f",
         ])
         .arg(key_path)
@@ -402,18 +395,14 @@ pub async fn install_ssh_key(
     password: String,
 ) -> Result<InstallKeyResult, String> {
     tokio::task::spawn_blocking(move || {
-        let key_path =
-            get_server_key_path(&app, &host, &user, port)?;
+        let key_path = get_server_key_path(&app, &host, &user, port)?;
 
         ensure_local_key(&key_path)?;
 
-        let public_key_path =
-            PathBuf::from(format!("{}.pub", key_path.display()));
+        let public_key_path = PathBuf::from(format!("{}.pub", key_path.display()));
 
         let public_key = fs::read_to_string(&public_key_path)
-            .map_err(|e| {
-                format!("Không đọc được public key: {}", e)
-            })?
+            .map_err(|e| format!("Không đọc được public key: {}", e))?
             .trim()
             .to_string();
 
@@ -455,11 +444,7 @@ pub async fn install_ssh_key(
             key = quoted_key
         );
 
-        run_remote_command(
-            &session,
-            &command,
-            None,
-        )?;
+        run_remote_command(&session, &command, None)?;
 
         /*
          * Verify ngay bằng key.
@@ -472,9 +457,7 @@ pub async fn install_ssh_key(
 
             auth_type: "key".into(),
 
-            key_path: Some(
-                key_path.to_string_lossy().to_string()
-            ),
+            key_path: Some(key_path.to_string_lossy().to_string()),
 
             password: None,
 
@@ -484,20 +467,12 @@ pub async fn install_ssh_key(
 
         let verify_session = connect_ssh(&verify_config)?;
 
-        run_remote_command(
-            &verify_session,
-            "echo SSH_KEY_OK",
-            None,
-        )?;
+        run_remote_command(&verify_session, "echo SSH_KEY_OK", None)?;
 
         Ok(InstallKeyResult {
-            key_path: key_path
-                .to_string_lossy()
-                .to_string(),
+            key_path: key_path.to_string_lossy().to_string(),
 
-            message:
-                "SSH key đã được tạo, cài lên server và kiểm tra thành công."
-                    .into(),
+            message: "SSH key đã được tạo, cài lên server và kiểm tra thành công.".into(),
         })
     })
     .await
