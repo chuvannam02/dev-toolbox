@@ -19,6 +19,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { DatePicker } from "./ui/date-picker";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import JiraTaskActions from "./JiraTaskActions";
 
 type Settings = {
 	baseUrl: string;
@@ -111,7 +112,7 @@ export default function JiraWorklog() {
 	const [issues, setIssues] = useState<Issue[]>([]);
 	const [logs, setLogs] = useState<Worklog[]>([]);
 	const [view, setView] = useState<
-		"tasks" | "logs" | "calendar" | "settings"
+		"tasks" | "logs" | "calendar" | "actions" | "settings"
 	>("tasks");
 	const [selectedDate, setSelectedDate] = useState<string | null>(null);
 	const [message, setMessage] = useState("");
@@ -431,6 +432,12 @@ export default function JiraWorklog() {
 								/>
 							</div>
 							<Button
+								variant={view === "actions" ? "default" : "outline"}
+								onClick={() => setView("actions")}
+							>
+								Tạo task / Log work
+							</Button>
+							<Button
 								variant={
 									view === "tasks" ? "default" : "outline"
 								}
@@ -498,7 +505,9 @@ export default function JiraWorklog() {
 							</Tooltip>
 						</CardContent>
 					</Card>
-					{view === "tasks" ? (
+					{view === "actions" ? (
+						<JiraTaskActions />
+					) : view === "tasks" ? (
 						<Card>
 							<CardHeader>
 								<CardTitle>Task của tôi</CardTitle>

@@ -77,6 +77,30 @@ pub struct JiraWorklog {
 #[serde(rename_all = "camelCase")]
 pub struct WorklogCheckResult { pub date: String, pub logged_seconds: i64, pub expected_seconds: i64, pub sufficient: bool }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraProject { pub key: String, pub name: String }
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraTreeIssue { pub key: String, pub summary: String, pub issue_type: String, pub status: String, pub url: String }
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraIssueDetail { pub key: String, pub summary: String, pub issue_type: String, pub status: String, pub description: String, pub assignee: String, pub labels: Vec<String>, pub url: String }
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraUser { pub account_id: String, pub display_name: String, pub is_current_user: bool }
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateSubtaskInput { pub project_key: String, pub parent_key: String, pub summary: String, pub description: String, pub assignee_account_id: Option<String>, pub labels: Vec<String> }
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddWorklogInput { pub issue_key: String, pub time_spent_seconds: i64, pub started: String, pub comment: String }
+
 fn default_schedule_frequency() -> String { "daily".into() }
 fn default_schedule_day() -> u8 { 1 }
 fn default_schedule_month() -> u8 { 1 }
@@ -138,6 +162,18 @@ async fn api(settings: &JiraSettings, path: &str, body: Value) -> Result<Value, 
     serde_json::from_str(&text).map_err(|e| format!("Jira trả về dữ liệu không hợp lệ: {e}"))
 }
 
+async fn api_get(settings: &JiraSettings, path: &str, query: &[(&str, String)]) -> Result<Value, String> {
+    let (email, token) = credentials(settings)?;
+    let query_string = query.iter().map(|(key, value)| format!("{key}={value}")).collect::<Vec<_>>().join("&");
+    let url = if query_string.is_empty() { format!("{}{}", normal_url(&settings.base_url), path) } else { format!("{}{}?{query_string}", normal_url(&settings.base_url), path) };
+    let response = Client::new().get(url)
+        .basic_auth(email, Some(token)).send().await.map_err(|e| format!("Kh\u{00f4}ng th\u{1ec3} k\u{1ebf}t n\u{1ed1}i Jira: {e}"))?;
+    let status = response.status();
+    let text = response.text().await.map_err(|e| e.to_string())?;
+    if !status.is_success() { return Err(format!("Jira tr\u{1ea3} v\u{1ec1} HTTP {status}: {text}")); }
+    serde_json::from_str(&text).map_err(|e| format!("Jira tr\u{1ea3} v\u{1ec1} d\u{1eef} li\u{1ec7}u kh\u{00f4}ng h\u{1ee3}p l\u{1ec7}: {e}"))
+}
+
 fn load_settings(state: &State<AppState>) -> Result<JiraSettings, String> {
     let db = state.db.lock().map_err(|_| "Không thể truy cập cấu hình Jira")?;
     let raw: String = db.query_row("SELECT config FROM jira_settings WHERE id = 1", [], |row| row.get(0))
@@ -173,6 +209,109 @@ pub async fn get_jira_issues(state: State<'_, AppState>, from_date: String, to_d
         updated: issue.pointer("/fields/updated").and_then(Value::as_str).unwrap_or_default().to_string(),
         url: format!("{}/browse/{}", normal_url(&settings.base_url), issue.get("key").and_then(Value::as_str).unwrap_or_default()),
     }).collect())
+}
+
+#[tauri::command]
+pub async fn get_jira_projects(state: State<'_, AppState>) -> Result<Vec<JiraProject>, String> {
+    let settings = load_settings(&state)?;
+    let result = api_get(&settings, "/rest/api/3/project/search", &[("maxResults", "100".into())]).await?;
+    Ok(result.get("values").and_then(Value::as_array).into_iter().flatten().map(|project| JiraProject {
+        key: project.get("key").and_then(Value::as_str).unwrap_or_default().to_string(),
+        name: project.get("name").and_then(Value::as_str).unwrap_or_default().to_string(),
+    }).collect())
+}
+
+#[tauri::command]
+pub async fn get_jira_child_issues(state: State<'_, AppState>, project_key: String, parent_key: Option<String>, search: Option<String>) -> Result<Vec<JiraTreeIssue>, String> {
+    let settings = load_settings(&state)?;
+    let mut jql = match parent_key {
+        Some(parent) => format!("parent = {parent} ORDER BY updated DESC"),
+        None => format!("project = {project_key} AND parent is EMPTY ORDER BY updated DESC"),
+    };
+    if let Some(term) = search.filter(|term| !term.trim().is_empty()) {
+        let condition = format!("(summary ~ \"{}\" OR key = \"{}\")", term.replace('"', "\\\""), term.replace('"', "\\\""));
+        jql = jql.replace(" ORDER BY", &format!(" AND {condition} ORDER BY"));
+    }
+    let result = api(&settings, "/rest/api/3/search/jql", json!({"jql": jql, "maxResults": 100, "fields": ["summary", "status", "issuetype"]})).await?;
+    Ok(result.get("issues").and_then(Value::as_array).into_iter().flatten().map(|issue| JiraTreeIssue {
+        key: issue.get("key").and_then(Value::as_str).unwrap_or_default().to_string(),
+        summary: issue.pointer("/fields/summary").and_then(Value::as_str).unwrap_or_default().to_string(),
+        issue_type: issue.pointer("/fields/issuetype/name").and_then(Value::as_str).unwrap_or_default().to_string(),
+        status: issue.pointer("/fields/status/name").and_then(Value::as_str).unwrap_or_default().to_string(),
+        url: format!("{}/browse/{}", normal_url(&settings.base_url), issue.get("key").and_then(Value::as_str).unwrap_or_default()),
+    }).collect())
+}
+
+fn adf_text(value: &Value) -> String {
+    match value {
+        Value::Object(map) => {
+            let mut output = map.get("text").and_then(Value::as_str).unwrap_or("").to_string();
+            if let Some(items) = map.get("content").and_then(Value::as_array) {
+                for item in items { let text = adf_text(item); if !text.is_empty() { if !output.is_empty() { output.push('\n'); } output.push_str(&text); } }
+            }
+            output
+        }
+        Value::Array(items) => items.iter().map(adf_text).filter(|text| !text.is_empty()).collect::<Vec<_>>().join("\n"),
+        _ => String::new(),
+    }
+}
+
+#[tauri::command]
+pub async fn get_jira_issue_detail(state: State<'_, AppState>, issue_key: String) -> Result<JiraIssueDetail, String> {
+    let settings = load_settings(&state)?;
+    let issue = api_get(&settings, &format!("/rest/api/3/issue/{issue_key}"), &[("fields", "summary,status,issuetype,description,assignee,labels".into())]).await?;
+    Ok(JiraIssueDetail {
+        key: issue.get("key").and_then(Value::as_str).unwrap_or_default().to_string(),
+        summary: issue.pointer("/fields/summary").and_then(Value::as_str).unwrap_or_default().to_string(),
+        issue_type: issue.pointer("/fields/issuetype/name").and_then(Value::as_str).unwrap_or_default().to_string(),
+        status: issue.pointer("/fields/status/name").and_then(Value::as_str).unwrap_or_default().to_string(),
+        description: adf_text(issue.pointer("/fields/description").unwrap_or(&Value::Null)),
+        assignee: issue.pointer("/fields/assignee/displayName").and_then(Value::as_str).unwrap_or("Chưa gán").to_string(),
+        labels: issue.pointer("/fields/labels").and_then(Value::as_array).into_iter().flatten().filter_map(Value::as_str).map(str::to_string).collect(),
+        url: format!("{}/browse/{}", normal_url(&settings.base_url), issue.get("key").and_then(Value::as_str).unwrap_or_default()),
+    })
+}
+
+#[tauri::command]
+pub async fn get_jira_assignable_users(state: State<'_, AppState>, project_key: String, issue_key: String) -> Result<Vec<JiraUser>, String> {
+    let settings = load_settings(&state)?;
+    let me = api_get(&settings, "/rest/api/3/myself", &[]).await?;
+    let my_id = me.get("accountId").and_then(Value::as_str).unwrap_or("").to_string();
+    let result = api_get(&settings, "/rest/api/3/user/assignable/search", &[("project", project_key), ("issueKey", issue_key), ("maxResults", "100".into())]).await?;
+    let mut users: Vec<JiraUser> = result.as_array().into_iter().flatten().map(|user| JiraUser {
+        account_id: user.get("accountId").and_then(Value::as_str).unwrap_or_default().to_string(),
+        display_name: user.get("displayName").and_then(Value::as_str).unwrap_or_default().to_string(),
+        is_current_user: user.get("accountId").and_then(Value::as_str) == Some(my_id.as_str()),
+    }).collect();
+    if !my_id.is_empty() && !users.iter().any(|user| user.account_id == my_id) {
+        users.insert(0, JiraUser { account_id: my_id, display_name: me.get("displayName").and_then(Value::as_str).unwrap_or("T\u{00f4}i").to_string(), is_current_user: true });
+    }
+    Ok(users)
+}
+
+#[tauri::command]
+pub async fn create_jira_subtask(state: State<'_, AppState>, input: CreateSubtaskInput) -> Result<JiraTreeIssue, String> {
+    if input.summary.trim().is_empty() { return Err("T\u{00ea}n task kh\u{00f4}ng \u{0111}\u{01b0}\u{1ee3}c \u{0111}\u{1ec3} tr\u{1ed1}ng.".into()); }
+    let settings = load_settings(&state)?;
+    let mut fields = json!({
+        "project": { "key": input.project_key }, "parent": { "key": input.parent_key },
+        "summary": input.summary.trim(), "issuetype": { "name": "Sub-task" }, "labels": input.labels,
+        "description": { "type": "doc", "version": 1, "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": input.description }] }] }
+    });
+    if input.description.trim().is_empty() { fields.as_object_mut().unwrap().remove("description"); }
+    if let Some(account_id) = input.assignee_account_id.filter(|value| !value.is_empty()) { fields["assignee"] = json!({"accountId": account_id}); }
+    let result = api(&settings, "/rest/api/3/issue", json!({"fields": fields})).await?;
+    Ok(JiraTreeIssue { key: result.get("key").and_then(Value::as_str).unwrap_or_default().to_string(), summary: input.summary, issue_type: "Sub-task".into(), status: "".into(), url: format!("{}/browse/{}", normal_url(&settings.base_url), result.get("key").and_then(Value::as_str).unwrap_or_default()) })
+}
+
+#[tauri::command]
+pub async fn add_jira_worklog(state: State<'_, AppState>, input: AddWorklogInput) -> Result<(), String> {
+    if input.time_spent_seconds <= 0 { return Err("Th\u{1edd}i gian log ph\u{1ea3}i l\u{1edb}n h\u{01a1}n 0.".into()); }
+    let settings = load_settings(&state)?;
+    let mut body = json!({"timeSpentSeconds": input.time_spent_seconds, "started": input.started});
+    if !input.comment.trim().is_empty() { body["comment"] = json!({"type":"doc","version":1,"content":[{"type":"paragraph","content":[{"type":"text","text":input.comment}]}]}); }
+    api(&settings, &format!("/rest/api/3/issue/{}/worklog", input.issue_key), body).await?;
+    Ok(())
 }
 
 #[tauri::command]
