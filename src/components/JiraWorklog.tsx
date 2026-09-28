@@ -432,7 +432,9 @@ export default function JiraWorklog() {
 								/>
 							</div>
 							<Button
-								variant={view === "actions" ? "default" : "outline"}
+								variant={
+									view === "actions" ? "default" : "outline"
+								}
 								onClick={() => setView("actions")}
 							>
 								Tạo task / Log work
